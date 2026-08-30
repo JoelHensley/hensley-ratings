@@ -32,28 +32,29 @@ Each method also computes **schedule strength** (average opponent rating) for ev
 ## Pipeline
 
 ```
-src/console/BuildFiles/raw-games.txt
-        │
-        ▼
-  DataConverter  ──►  src/console/BuildFiles/converted-games.csv
+src/console/BuildFiles/raw-teams.txt   src/console/BuildFiles/raw-games.txt
+        │                                          │
+        ▼                                          ▼
+  TeamsParser  ──►  src/console/BuildFiles/teams.csv
                                    │
-  src/console/BuildFiles/teams.csv │
-        │                          ▼
-        └──────────►  DatabaseImport  ──►  src/console/BuildFiles/collegefootball.db
-                                                       │
-                                                       ▼
-                                               RatingSystem
-                                                       │
-                                          ┌────────────┼────────────┐
-                                          ▼            ▼            ▼
-                                    TeamResults  ConferenceResults  DivisionResults
-                                    (CSV + DB)
-                                                       │
-                                                       ▼
-                                              RatingEvaluator
-                                                       │
-                                                       ▼
-                                                  results.csv
+                                   │         DataConverter  ──►  converted-games.csv
+                                   │                                   │
+                                   └──────────────────────────────────►▼
+                                                               DatabaseImport  ──►  collegefootball.db
+                                                                           │
+                                                                           ▼
+                                                                   RatingSystem
+                                                                           │
+                                                              ┌────────────┼────────────┐
+                                                              ▼            ▼            ▼
+                                                        TeamResults  ConferenceResults  DivisionResults
+                                                        (CSV + DB)
+                                                                           │
+                                                                           ▼
+                                                                  RatingEvaluator
+                                                                           │
+                                                                           ▼
+                                                                      results.csv
 ```
 
 ---
@@ -80,7 +81,8 @@ Copy `src/console/.env.example` to `src/console/.env` and set:
 | Variable | Description |
 |---|---|
 | `RATINGS_OUTPUT_DIR` | Folder where weekly output is archived |
-| `TEAMS_DATA_FILE` | Path to your teams CSV |
+| `TEAMS_DATA_FILE` | Path to the current season's teams CSV |
+| `PREVIOUS_TEAMS_DATA_FILE` | Path to the previous season's teams CSV (used by TeamsParser) |
 
 ### 3. Populate `src/console/BuildFiles/`
 
@@ -88,9 +90,18 @@ The `BuildFiles/` directory is not tracked by git. You need to supply:
 
 | File | Format | Description |
 |---|---|---|
+| `raw-teams.txt` | Hierarchical text | Team list export (see below) |
 | `raw-games.txt` | Fixed-width text | Game results (see format below) |
 
-### 4. Run the pipeline
+### 4. Generate `teams.csv` (start of each season)
+
+```bash
+./src/console/parse-teams.sh
+```
+
+This parses `raw-teams.txt` against the previous season's teams CSV and writes `BuildFiles/teams.csv`. Teams not found in the previous year are printed to stdout for review.
+
+### 5. Run the ratings pipeline
 
 ```bash
 ./src/console/compute-ratings.sh <week_number>
@@ -101,6 +112,12 @@ This runs DataConverter → DatabaseImport → RatingSystem in sequence. Output 
 ---
 
 ## Input File Formats
+
+### `raw-teams.txt` (hierarchical text)
+
+A website export listing all college football teams, structured by division → conference → team. Section headers identify divisions (`NCAA Division I - Football Bowl Subdivision`, etc.), lettered entries (`A.`, `B.`, …) identify conferences, and indented lines below them are team names. Conferences with internal divisions (`i) East Division`, etc.) are flattened — all teams are emitted under the parent conference.
+
+`TeamsParser` converts this file into `teams.csv`, resolving known name differences between the export and the previous season's data via `KnownMappings.cs`. Teams not found in the previous year are printed to stdout for review.
 
 ### `raw-games.txt` (fixed-width)
 
@@ -145,6 +162,7 @@ All source lives under `src/console/`.
 
 | Project | Type | Description |
 |---|---|---|
+| `TeamsParser` | Console | Parses `raw-teams.txt` into `teams.csv`; validates against prior season |
 | `DataConverter` | Console | Converts `raw-games.txt` to `converted-games.csv` |
 | `DatabaseImport` | Console | Imports teams and games into SQLite; computes connectivity groups |
 | `DatabaseLayer` | Library | EF Core data access layer (SQLite); shared by all projects |
