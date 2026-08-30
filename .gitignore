@@ -11,5 +11,8 @@ BuildFiles_OLD/
 # RatingEvaluator output
 results.csv
 
+# Environment config
+.env
+
 # macOS
 .DS_Store

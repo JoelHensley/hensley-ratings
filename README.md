@@ -32,14 +32,14 @@ Each method also computes **schedule strength** (average opponent rating) for ev
 ## Pipeline
 
 ```
-BuildFiles/raw-games.txt
+src/console/BuildFiles/raw-games.txt
         │
         ▼
-  DataConverter  ──►  BuildFiles/converted-games.csv
+  DataConverter  ──►  src/console/BuildFiles/converted-games.csv
                                    │
-  BuildFiles/teams.csv             │
+  src/console/BuildFiles/teams.csv │
         │                          ▼
-        └──────────►  DatabaseImport  ──►  BuildFiles/collegefootball.db
+        └──────────►  DatabaseImport  ──►  src/console/BuildFiles/collegefootball.db
                                                        │
                                                        ▼
                                                RatingSystem
@@ -70,26 +70,33 @@ BuildFiles/raw-games.txt
 ### 1. Build the projects
 
 ```bash
-dotnet build HensleyRatings.sln
+dotnet build src/console/HensleyRatings.sln
 ```
 
-### 2. Populate `BuildFiles/`
+### 2. Configure `.env`
+
+Copy `src/console/.env.example` to `src/console/.env` and set:
+
+| Variable | Description |
+|---|---|
+| `RATINGS_OUTPUT_DIR` | Folder where weekly output is archived |
+| `TEAMS_DATA_FILE` | Path to your teams CSV |
+
+### 3. Populate `src/console/BuildFiles/`
 
 The `BuildFiles/` directory is not tracked by git. You need to supply:
 
 | File | Format | Description |
 |---|---|---|
 | `raw-games.txt` | Fixed-width text | Game results (see format below) |
-| `teams.csv` | `Division,Conference,Team` | Team/conference/division definitions |
 
-### 3. Run the pipeline
+### 4. Run the pipeline
 
 ```bash
-cd BuildFiles
-./compute-ratings.sh
+./src/console/compute-ratings.sh <week_number>
 ```
 
-This runs DataConverter → DatabaseImport → RatingSystem in sequence. Output CSVs are written to `BuildFiles/Output/`.
+This runs DataConverter → DatabaseImport → RatingSystem in sequence. Output CSVs are written to `src/console/BuildFiles/Output/` and copied to `$RATINGS_OUTPUT_DIR/Week <week_number>/`.
 
 ---
 
@@ -121,7 +128,7 @@ FBS,SEC,Alabama
 
 ## Evaluating Rating Quality
 
-The `RatingEvaluator` project benchmarks the four rating systems against external references. To use it, supply these two files in `BuildFiles/`:
+The `RatingEvaluator` project benchmarks the four rating systems against external references. To use it, supply these two files in `src/console/BuildFiles/`:
 
 | File | Format | Description |
 |---|---|---|
@@ -133,6 +140,8 @@ The evaluator outputs a `results.csv` with mistake count, total error (Potemkin'
 ---
 
 ## Project Structure
+
+All source lives under `src/console/`.
 
 | Project | Type | Description |
 |---|---|---|
