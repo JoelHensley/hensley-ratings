@@ -1,0 +1,15 @@
+# .NET build artifacts
+bin/
+obj/
+.vs/
+*.user
+
+# Runtime data — supply these yourself in BuildFiles/ (see README)
+BuildFiles/
+BuildFiles_OLD/
+
+# RatingEvaluator output
+results.csv
+
+# macOS
+.DS_Store
