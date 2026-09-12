@@ -14,5 +14,8 @@ results.csv
 # Environment config
 .env
 
+# Local Claude Code config (not for version control)
+.claude/
+
 # macOS
 .DS_Store
