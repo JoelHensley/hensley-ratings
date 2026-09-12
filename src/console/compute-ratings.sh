@@ -60,7 +60,8 @@ echo ""
 # ── Step 3: Compute ratings ───────────────────────────────────────────────────
 echo "[3/3] Computing ratings for all weeks..."
 cd "$BUILD_DIR"
-rm -rf Output && mkdir -p Output
+if [[ "${WIPE_DB_ON_START:-true}" == "true" ]]; then rm -rf Output; fi
+mkdir -p Output
 dotnet run --project "$CONSOLE_DIR/RatingSystem" --no-build 2>&1 \
     | grep -v "^$" | sed 's/^/  /'
 echo ""

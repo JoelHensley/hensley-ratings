@@ -19,12 +19,22 @@ namespace DatabaseLayer
         public CollegeFootballEntities()
         {
             Database.EnsureCreated();
+            EnsureSchemaUpgrades();
         }
 
         public CollegeFootballEntities(DbContextOptions<CollegeFootballEntities> options)
             : base(options)
         {
             Database.EnsureCreated();
+            EnsureSchemaUpgrades();
+        }
+
+        private void EnsureSchemaUpgrades()
+        {
+            // Add columns introduced after initial schema creation.
+            // ALTER TABLE ADD COLUMN is idempotent in SQLite when wrapped in try/catch.
+            try { Database.ExecuteSqlRaw("ALTER TABLE WeekSettings ADD COLUMN ComputedGameCount INTEGER"); }
+            catch { }
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

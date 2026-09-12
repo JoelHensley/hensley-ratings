@@ -53,13 +53,22 @@ namespace RatingSystem
                 settings.CurrentWeek = ws.Week;
                 settings.CurrentCutoffDate = DateTime.Parse(ws.CutoffDate);
 
+                var weekGames = allGames.Where(g => g.Date <= settings.CurrentCutoffDate).ToList();
+
+                if (settings.SkipUnchangedWeeks
+                    && ws.ComputedGameCount.HasValue
+                    && ws.ComputedGameCount.Value == weekGames.Count)
+                {
+                    Console.WriteLine($"\n  Week {ws.Week}: skipping ({weekGames.Count} games, unchanged)");
+                    continue;
+                }
+
                 Console.WriteLine($"\n━━━ Week {ws.Week} (cutoff {ws.CutoffDate}) ━━━━━━━━━━━━━");
 
                 foreach (var t in allTeams)       t.Group = null;
                 foreach (var c in allConferences) c.Group = null;
                 foreach (var d in allDivisions)   d.Group = null;
 
-                var weekGames = allGames.Where(g => g.Date <= settings.CurrentCutoffDate).ToList();
                 TeamGraph.AssignGroups(allTeams, weekGames);
                 ConferenceGraph.AssignGroups(allConferences, allTeams);
                 DivisionGraph.AssignGroups(allDivisions, allConferences, allTeams);
@@ -98,6 +107,9 @@ namespace RatingSystem
                             ComputeDivisionRatings(group);
                     }
                 }
+
+                ws.ComputedGameCount = weekGames.Count;
+                entities.SaveChanges();
             }
         }
 

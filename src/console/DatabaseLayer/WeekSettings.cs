@@ -6,5 +6,6 @@ namespace DatabaseLayer
         public int Year { get; set; }
         public int Week { get; set; }
         public string CutoffDate { get; set; }
+        public int? ComputedGameCount { get; set; }
     }
 }

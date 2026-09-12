@@ -98,14 +98,20 @@ namespace DataImport
 
         private void DeleteYearData()
         {
-            if (!settings.WipeDbOnStart)
-            {
-                Console.WriteLine("Skipping data wipe (WIPE_DB_ON_START=false)");
-                return;
-            }
-
             var games = entities.Games.Where(g => g.Year == settings.Year).ToList();
             entities.Games.RemoveRange(games);
+
+            if (!settings.WipeDbOnStart)
+            {
+                // Partial refresh: only clear games so they're re-imported from the CSV.
+                // Results and WeekSettings (including ComputedGameCount) are preserved
+                // so RatingSystem can skip weeks whose game count hasn't changed.
+                foreach (var t in entities.Teams) t.Group = null;
+                foreach (var c in entities.Conferences) c.Group = null;
+                foreach (var d in entities.Divisions) d.Group = null;
+                entities.SaveChanges();
+                return;
+            }
 
             var weekSettings = entities.WeekSettings.Where(ws => ws.Year == settings.Year).ToList();
             entities.WeekSettings.RemoveRange(weekSettings);
@@ -284,9 +290,8 @@ namespace DataImport
 
                 if (row.Length != 6)
                 {
-                    Console.WriteLine($"\nError in line: {line}");
-                    errors++;
-                    continue;
+                    Console.WriteLine($"\nWarning: skipping malformed line: {line}");
+                    continue; // not a fatal error — could be a scheduled game with missing data
                 }
 
                 string gameDateString = row[0];

@@ -22,6 +22,7 @@ namespace RatingSystem
         public int MinGroupSize = 20;
         public int CurrentWeek;
         public DateTime CurrentCutoffDate;
+        public bool SkipUnchangedWeeks;
 
         public RatingSettings()
         {
@@ -36,6 +37,11 @@ namespace RatingSystem
             ComputeStandardRatings             = IsEnabled("STANDARD_RATING_ENABLED");
             ComputeMaxPointDifferentialRatings = IsEnabled("MAX_POINT_DIFF_RATING_ENABLED");
             ComputeHomefieldAdvantageRatings   = IsEnabled("HOME_FIELD_ADV_RATING_ENABLED");
+
+            // Skip weeks whose game count hasn't changed since the last computation.
+            // Automatically enabled when WIPE_DB_ON_START=false (incremental mode).
+            SkipUnchangedWeeks = !(Environment.GetEnvironmentVariable("WIPE_DB_ON_START") ?? "true")
+                                   .Equals("true", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsEnabled(string envVar) =>
