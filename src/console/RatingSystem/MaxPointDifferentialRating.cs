@@ -4,6 +4,7 @@
  * This class extends the standard rating by limiting the point
  * differential for any given game.
  */
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using DatabaseLayer;
@@ -39,6 +40,14 @@ namespace RatingSystem
             maxPointDifferential = _maxPointDifferential;
         }
 
+        public MaxPointDifferentialRating(CollegeFootballEntities _entities,
+                                          int _group, RatingSettings _settings,
+                                          int _maxPointDifferential)
+            : base(_entities, _group, _settings)
+        {
+            maxPointDifferential = _maxPointDifferential;
+        }
+
         /// <summary>
         /// Creates the team matrix to solve. Limits the point differential
         /// to the maxPointDifferential value.
@@ -53,19 +62,18 @@ namespace RatingSystem
             foreach (Team team in entities.Teams.Where(t => t.Group ==
                             group).OrderBy(t => t.ID))
             {
-                gameCount = team.Games.Count();
+                var homeGames = GetTeamHomeGames(team);
+                var awayGames = GetTeamAwayGames(team);
+                gameCount = homeGames.Count + awayGames.Count;
+                double mpd = ComputeMaxPD(homeGames, awayGames, maxPointDifferential);
+
                 matrix[rowCount] = new double[teamCount + 1];
-
-                // Diaganol value is the number of games played
                 matrix[teamIDMapping[team.ID]][teamIDMapping[team.ID]] = gameCount;
-
-                // Right hand side of every line is total score margin
-                matrix[rowCount][teamCount] =
-                        team.GetPointDifferential(maxPointDifferential);
+                matrix[rowCount][teamCount] = mpd;
                 rowCount++;
             }
 
-            foreach (Game game in entities.GetGames(group, ratingSettings.Year))
+            foreach (Game game in entities.GetGames(group, ratingSettings.Year, ratingSettings.CurrentCutoffDate))
             {
                 matrix[teamIDMapping[game.HomeTeamID]][teamIDMapping[game.AwayTeamID]] -= 1;
                 matrix[teamIDMapping[game.AwayTeamID]][teamIDMapping[game.HomeTeamID]] -= 1;
@@ -100,7 +108,7 @@ namespace RatingSystem
             foreach (Conference conference in entities.Conferences.Where(c =>
                             c.Group == group).OrderBy(c => c.ID))
             {
-                conferenceGames = entities.GetGames(conference);
+                conferenceGames = entities.GetGames(conference, ratingSettings.Year, ratingSettings.CurrentCutoffDate);
                 gameCount = conferenceGames.Count();
 
                 matrix[rowCount] = new double[conferenceCount + 1];
@@ -153,7 +161,7 @@ namespace RatingSystem
             foreach (Division division in entities.Divisions.Where(d => d.Group ==
                             group).OrderBy(d => d.ID))
             {
-                divisionGames = entities.GetGames(division);
+                divisionGames = entities.GetGames(division, ratingSettings.Year, ratingSettings.CurrentCutoffDate);
                 gameCount = divisionGames.Count();
 
                 matrix[rowCount] = new double[divisionCount + 1];
@@ -185,6 +193,22 @@ namespace RatingSystem
             matrix[divisionCount - 1][divisionCount] = 0;
 
             return matrix;
+        }
+
+        private static double ComputeMaxPD(IList<Game> homeGames, IList<Game> awayGames, int maxPD)
+        {
+            double total = 0;
+            foreach (var g in homeGames)
+            {
+                int diff = g.HomeScore - g.AwayScore;
+                total += Math.Abs(diff) > maxPD ? maxPD * Math.Sign(diff) : diff;
+            }
+            foreach (var g in awayGames)
+            {
+                int diff = g.AwayScore - g.HomeScore;
+                total += Math.Abs(diff) > maxPD ? maxPD * Math.Sign(diff) : diff;
+            }
+            return total;
         }
     }
 }

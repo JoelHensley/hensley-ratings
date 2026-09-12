@@ -1,37 +1,20 @@
-/* ConferenceGraph.cs
- * Joel Hensley
- * February 9, 2010
- * This class is used to identify and store the different conference
- * groups in the database. A conference is connected to another conference
- * if there is a series of games for any of the teams in that conference
- * that connects to any of the teams in another conference.
- */
 using System.Collections.Generic;
 using System.Linq;
-using DatabaseLayer;
 using Microsoft.EntityFrameworkCore;
 
-namespace DataImport
+namespace DatabaseLayer
 {
-    class ConferenceGraph
+    public class ConferenceGraph
     {
         private CollegeFootballEntities entities = null;
         private List<int> visitedGroups = null;
 
-        /// <summary>
-        /// Default constructor
-        /// </summary>
-        /// <param name="_entities">The database object</param>
         public ConferenceGraph(CollegeFootballEntities _entities)
         {
             entities = _entities;
             visitedGroups = new List<int>();
         }
 
-        /// <summary>
-        /// Loops through all the conferences in the database until all
-        /// conferences are included in some group.
-        /// </summary>
         public void CreateConferenceGroups()
         {
             Conference conference;
@@ -42,18 +25,11 @@ namespace DataImport
             {
                 visitedGroups.Clear();
                 ConnectConferences(conference, group);
-                conference = entities.Conferences.FirstOrDefault(t => t.Group ==
-                                                                        null);
+                conference = entities.Conferences.FirstOrDefault(t => t.Group == null);
                 group++;
             }
         }
 
-        /// <summary>
-        /// Recursively loops through a given conference's distinct set of team
-        /// groups to find other conferences with at least one team in that group.
-        /// </summary>
-        /// <param name="team">The conference being examined</param>
-        /// <param name="group">The group the conference belongs to</param>
         private void ConnectConferences(Conference conference, int group)
         {
             List<Conference> groupConferences;
@@ -67,10 +43,7 @@ namespace DataImport
             foreach (int teamGroup in groupList)
             {
                 if (visitedGroups.Contains(teamGroup))
-                {
-                    // We've already visited that group
                     continue;
-                }
 
                 visitedGroups.Add(teamGroup);
 
@@ -82,14 +55,52 @@ namespace DataImport
 
                 foreach (Conference otherConference in groupConferences)
                 {
-                    // It's possible the conference has already been examined
-                    // so we don't want to call the recursive method if so.
                     entities.Entry(otherConference).Reload();
-
                     if (otherConference.Group == null)
-                    {
                         ConnectConferences(otherConference, group);
-                    }
+                }
+            }
+        }
+
+        public static void AssignGroups(IList<Conference> conferences, IList<Team> teams)
+        {
+            int group = 1;
+            foreach (var conference in conferences)
+            {
+                if (conference.Group == null)
+                {
+                    var visited = new HashSet<int>();
+                    ConnectConferencesInMemory(conference, group, conferences, teams, visited);
+                    group++;
+                }
+            }
+        }
+
+        private static void ConnectConferencesInMemory(Conference conf, int group,
+            IList<Conference> conferences, IList<Team> teams, HashSet<int> visited)
+        {
+            conf.Group = group;
+
+            var teamGroups = teams
+                .Where(t => t.ConferenceID == conf.ID && t.Group.HasValue)
+                .Select(t => t.Group.Value)
+                .Distinct()
+                .ToList();
+
+            foreach (int teamGroup in teamGroups)
+            {
+                if (!visited.Add(teamGroup))
+                    continue;
+
+                var otherConfs = conferences
+                    .Where(c => c.Group == null
+                             && teams.Any(t => t.Group == teamGroup && t.ConferenceID == c.ID))
+                    .ToList();
+
+                foreach (var other in otherConfs)
+                {
+                    if (other.Group == null)
+                        ConnectConferencesInMemory(other, group, conferences, teams, visited);
                 }
             }
         }

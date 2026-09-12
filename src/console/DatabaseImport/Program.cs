@@ -98,17 +98,26 @@ namespace DataImport
 
         private void DeleteYearData()
         {
+            if (!settings.WipeDbOnStart)
+            {
+                Console.WriteLine("Skipping data wipe (WIPE_DB_ON_START=false)");
+                return;
+            }
+
             var games = entities.Games.Where(g => g.Year == settings.Year).ToList();
             entities.Games.RemoveRange(games);
 
+            var weekSettings = entities.WeekSettings.Where(ws => ws.Year == settings.Year).ToList();
+            entities.WeekSettings.RemoveRange(weekSettings);
+
             var teamResults = entities.TeamResults
-                .Where(tr => tr.Year == settings.Year && tr.Week == settings.Week).ToList();
+                .Where(tr => tr.Year == settings.Year).ToList();
             entities.TeamResults.RemoveRange(teamResults);
             var confResults = entities.ConferenceResults
-                .Where(cr => cr.Year == settings.Year && cr.Week == settings.Week).ToList();
+                .Where(cr => cr.Year == settings.Year).ToList();
             entities.ConferenceResults.RemoveRange(confResults);
             var divResults = entities.DivisionResults
-                .Where(dr => dr.Year == settings.Year && dr.Week == settings.Week).ToList();
+                .Where(dr => dr.Year == settings.Year).ToList();
             entities.DivisionResults.RemoveRange(divResults);
 
             var teamAffs = entities.TeamAffiliations.Where(ta => ta.Year == settings.Year).ToList();
@@ -116,7 +125,6 @@ namespace DataImport
             var confAffs = entities.ConferenceAffiliations.Where(ca => ca.Year == settings.Year).ToList();
             entities.ConferenceAffiliations.RemoveRange(confAffs);
 
-            // Reset connectivity groups so CreateTeamGroups rebuilds from this week's games
             foreach (var t in entities.Teams) t.Group = null;
             foreach (var c in entities.Conferences) c.Group = null;
             foreach (var d in entities.Divisions) d.Group = null;
@@ -320,6 +328,9 @@ namespace DataImport
 
                 try { gameDate = Convert.ToDateTime(gameDateString); }
                 catch (Exception) { Console.WriteLine($"\nInvalid date in line: {line}"); errors++; continue; }
+
+                if (homeScore == 0 && awayScore == 0)
+                    continue; // unplayed game — skip
 
                 var game = new Game
                 {

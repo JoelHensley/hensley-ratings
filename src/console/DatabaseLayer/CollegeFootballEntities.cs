@@ -655,6 +655,21 @@ namespace DatabaseLayer
             return cumulativeTotal;
         }
 
+        public IEnumerable<Game> GetGames(int groupNum, int year, DateTime cutoffDate)
+            => GetGames(groupNum, year).Where(g => g.Date <= cutoffDate);
+
+        public IEnumerable<Game> GetInterConferenceGames(int conferenceGroup, int year, DateTime cutoffDate)
+            => GetInterConferenceGames(conferenceGroup, year).Where(g => g.Date <= cutoffDate);
+
+        public IEnumerable<Game> GetInterDivisionGames(int divisionGroup, int year, DateTime cutoffDate)
+            => GetInterDivisionGames(divisionGroup, year).Where(g => g.Date <= cutoffDate);
+
+        public IEnumerable<Game> GetGames(Conference conference, int year, DateTime cutoffDate)
+            => GetGames(conference).Where(g => g.Year == year && g.Date <= cutoffDate);
+
+        public IEnumerable<Game> GetGames(Division division, int year, DateTime cutoffDate)
+            => GetGames(division).Where(g => g.Year == year && g.Date <= cutoffDate);
+
         /// <summary>
         /// Deletes all rows from all tables in the database.
         /// </summary>

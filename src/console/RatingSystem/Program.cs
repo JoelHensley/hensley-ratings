@@ -1,10 +1,3 @@
-/* Program.cs
- * Joel Hensley
- * January 16, 2010
- * This class is used to call the different rating systems, write the results
- * to CSV files, write the results to the database, and then output
- * the progress to the console.
- */
 using System;
 using System.IO;
 using System.Linq;
@@ -28,9 +21,6 @@ namespace RatingSystem
         private double homeFieldAdvantage;
         private const int RoundDecimals = 3;
 
-        /// <summary>
-        /// Default constructor
-        /// </summary>
         public Program()
         {
             settings = new RatingSettings();
@@ -38,86 +28,79 @@ namespace RatingSystem
             homeFieldAdvantage = 0;
         }
 
-        /// <summary>
-        /// Calls run
-        /// </summary>
-        /// <param name="args">No args are requried</param>
         static void Main(string[] args)
         {
             Program p = new Program();
             p.Run();
-
         }
 
-        /// <summary>
-        /// Loops through each group in the teams, conferences, and divisions
-        /// and computes the ratings specified in the settings file.
-        /// </summary>
         public void Run()
         {
-            int count;
-            List<int?> groups = null;
+            var allTeams       = entities.Teams.ToList();
+            var allConferences = entities.Conferences.ToList();
+            var allDivisions   = entities.Divisions.ToList();
+            var allGames       = entities.Games.Where(g => g.Year == settings.Year).ToList();
 
-            if (settings.ComputeTeamRatings)
+            var weekSettingsList = entities.WeekSettings
+                .Where(ws => ws.Year == settings.Year && ws.Week >= settings.MinWeek)
+                .OrderBy(ws => ws.Week)
+                .ToList();
+
+            Console.WriteLine($"Processing {weekSettingsList.Count} weeks for {settings.Year} (weeks >= {settings.MinWeek})");
+
+            foreach (var ws in weekSettingsList)
             {
-                groups = entities.Teams.Where(t => t.Group != null).Select(t =>
-                                        t.Group).Distinct().ToList();
+                settings.CurrentWeek = ws.Week;
+                settings.CurrentCutoffDate = DateTime.Parse(ws.CutoffDate);
 
-                foreach (int group in groups)
+                Console.WriteLine($"\n━━━ Week {ws.Week} (cutoff {ws.CutoffDate}) ━━━━━━━━━━━━━");
+
+                foreach (var t in allTeams)       t.Group = null;
+                foreach (var c in allConferences) c.Group = null;
+                foreach (var d in allDivisions)   d.Group = null;
+
+                var weekGames = allGames.Where(g => g.Date <= settings.CurrentCutoffDate).ToList();
+                TeamGraph.AssignGroups(allTeams, weekGames);
+                ConferenceGraph.AssignGroups(allConferences, allTeams);
+                DivisionGraph.AssignGroups(allDivisions, allConferences, allTeams);
+
+                entities.SaveChanges();
+
+                if (settings.ComputeTeamRatings)
                 {
-                    count = entities.Teams.Where(t => t.Group == group).Count();
-
-                    if (count >= settings.MinGroupSize)
+                    var groups = allTeams.Where(t => t.Group != null).Select(t => t.Group).Distinct().ToList();
+                    foreach (int group in groups)
                     {
-                        // There must be at least 2 teams in the group to calculate
-                        // ratings
-                        ComputeTeamRatings(group);
+                        int count = allTeams.Count(t => t.Group == group);
+                        if (count >= settings.MinGroupSize)
+                            ComputeTeamRatings(group);
                     }
                 }
-            }
 
-            if (settings.ComputeConferenceRatings)
-            {
-                groups = entities.Conferences.Where(c => c.Group != null).Select(
-                                        c => c.Group).Distinct().ToList();
-
-                foreach (int group in groups)
+                if (settings.ComputeConferenceRatings)
                 {
-                    count = entities.Conferences.Where(c => c.Group ==
-                                                        group).Count();
-
-                    if (count >= settings.MinGroupSize)
+                    var groups = allConferences.Where(c => c.Group != null).Select(c => c.Group).Distinct().ToList();
+                    foreach (int group in groups)
                     {
-                        // There must be at least 2 conferences in the group to
-                        // calculate ratings
-                        ComputeConferenceRatings(group);
+                        int count = allConferences.Count(c => c.Group == group);
+                        if (count >= settings.MinGroupSize)
+                            ComputeConferenceRatings(group);
                     }
                 }
-            }
 
-            if (settings.ComputeDivisionRatings)
-            {
-                groups = entities.Divisions.Where(d => d.Group != null).Select(d =>
-                                        d.Group).Distinct().ToList();
-
-                foreach (int group in groups)
+                if (settings.ComputeDivisionRatings)
                 {
-                    count = entities.Divisions.Where(d => d.Group == group).Count();
-
-                    if (count >= settings.MinGroupSize)
+                    var groups = allDivisions.Where(d => d.Group != null).Select(d => d.Group).Distinct().ToList();
+                    foreach (int group in groups)
                     {
-                        // There must be at least 2 divisions in the group to
-                        // calculate ratings
-                        ComputeDivisionRatings(group);
+                        int count = allDivisions.Count(d => d.Group == group);
+                        if (count >= settings.MinGroupSize)
+                            ComputeDivisionRatings(group);
                     }
                 }
             }
         }
 
-        /// <summary>
-        /// Computes the rating types for teams specified in the settings file.
-        /// </summary>
-        /// <param name="group">The group of teams to process</param>
         public void ComputeTeamRatings(int group)
         {
             double[][] matrix;
@@ -134,9 +117,8 @@ namespace RatingSystem
 
             if (settings.ComputeStandardRatings)
             {
-                StandardRating stdRating = new StandardRating(entities, group);
-                Console.WriteLine("\n{0} for group {1}", StandardRating.RatingName,
-                                group);
+                StandardRating stdRating = new StandardRating(entities, group, settings);
+                Console.WriteLine("\n{0} for group {1}", StandardRating.RatingName, group);
                 Console.Write("Creating team matrix...");
                 matrix = stdRating.CreateTeamMatrix();
                 Console.WriteLine("DONE");
@@ -148,10 +130,8 @@ namespace RatingSystem
 
             if (settings.ComputeHomefieldAdvantageRatings)
             {
-                HomeFieldAdvantageRating hfaRating = new
-                                HomeFieldAdvantageRating(entities, group);
-                Console.WriteLine("\n{0} for group {1}",
-                                HomeFieldAdvantageRating.RatingName, group);
+                HomeFieldAdvantageRating hfaRating = new HomeFieldAdvantageRating(entities, group, settings);
+                Console.WriteLine("\n{0} for group {1}", HomeFieldAdvantageRating.RatingName, group);
                 Console.Write("Creating team matrix...");
                 matrix = hfaRating.CreateTeamMatrix();
                 Console.WriteLine("DONE");
@@ -164,11 +144,8 @@ namespace RatingSystem
 
             if (settings.ComputeMaxPointDifferentialRatings)
             {
-                MaxPointDifferentialRating mpdRating = new
-                                MaxPointDifferentialRating(entities, group,
-                                settings.MaxPointDifferential);
-                Console.WriteLine("\n{0} for group {1}",
-                                MaxPointDifferentialRating.RatingName, group);
+                MaxPointDifferentialRating mpdRating = new MaxPointDifferentialRating(entities, group, settings, settings.MaxPointDifferential);
+                Console.WriteLine("\n{0} for group {1}", MaxPointDifferentialRating.RatingName, group);
                 Console.Write("Creating team matrix...");
                 matrix = mpdRating.CreateTeamMatrix();
                 Console.WriteLine("DONE");
@@ -180,16 +157,13 @@ namespace RatingSystem
 
             if (settings.ComputeHensleyRatings)
             {
-                HensleyRating hensleyRating = new HensleyRating(entities, group,
-                                settings.LowerBounds, settings.UpperBounds);
-                Console.WriteLine("\n{0} for group {1}", HensleyRating.RatingName,
-                                group);
+                HensleyRating hensleyRating = new HensleyRating(entities, group, settings.LowerBounds, settings.UpperBounds, settings);
+                Console.WriteLine("\n{0} for group {1}", HensleyRating.RatingName, group);
                 Console.Write("Creating team matrix...");
                 matrix = hensleyRating.CreateTeamMatrix();
                 Console.WriteLine("DONE");
                 Console.Write("Calculating ratings...");
-                hensleyRatingVector = hensleyRating.GetRatings(matrix,
-                                                RatingObject.Team);
+                hensleyRatingVector = hensleyRating.GetRatings(matrix, RatingObject.Team);
                 hensleySSVector = ComputeTeamScheduleStrength(group, hensleyRatingVector);
                 Console.WriteLine("DONE");
             }
@@ -197,18 +171,13 @@ namespace RatingSystem
             OutputResults(group, RatingObject.Team, null);
         }
 
-        /// <summary>
-        /// Computes the rating types for conferences specified in the settings
-        /// file.
-        /// </summary>
-        /// <param name="group">The group of conferences to process</param>
         public void ComputeConferenceRatings(int group)
         {
             double[][] matrix;
             IEnumerable<Game> interConferenceGames;
             stdSSVector = null; hfaSSVector = null; mpdSSVector = null; hensleySSVector = null;
 
-            interConferenceGames = entities.GetInterConferenceGames(group, settings.Year);
+            interConferenceGames = entities.GetInterConferenceGames(group, settings.Year, settings.CurrentCutoffDate);
 
             if (settings.ComputeStandardRatings
                 || settings.ComputeHomefieldAdvantageRatings
@@ -221,31 +190,26 @@ namespace RatingSystem
 
             if (settings.ComputeStandardRatings)
             {
-                StandardRating stdRating = new StandardRating(entities, group);
-                Console.WriteLine("\n{0} for group {1}", StandardRating.RatingName,
-                                group);
+                StandardRating stdRating = new StandardRating(entities, group, settings);
+                Console.WriteLine("\n{0} for group {1}", StandardRating.RatingName, group);
                 Console.Write("Creating conference matrix...");
                 matrix = stdRating.CreateConferenceMatrix(interConferenceGames);
                 Console.WriteLine("DONE");
                 Console.Write("Calculating ratings...");
-                stdRatingVector = stdRating.GetRatings(matrix,
-                                                RatingObject.Conference);
+                stdRatingVector = stdRating.GetRatings(matrix, RatingObject.Conference);
                 stdSSVector = ComputeConferenceScheduleStrength(interConferenceGames, group, stdRatingVector);
                 Console.WriteLine("DONE");
             }
 
             if (settings.ComputeHomefieldAdvantageRatings)
             {
-                HomeFieldAdvantageRating hfaRating = new
-                                HomeFieldAdvantageRating(entities, group);
-                Console.WriteLine("\n{0} for group {1}",
-                                HomeFieldAdvantageRating.RatingName, group);
+                HomeFieldAdvantageRating hfaRating = new HomeFieldAdvantageRating(entities, group, settings);
+                Console.WriteLine("\n{0} for group {1}", HomeFieldAdvantageRating.RatingName, group);
                 Console.Write("Creating conference matrix...");
                 matrix = hfaRating.CreateConferenceMatrix(interConferenceGames);
                 Console.WriteLine("DONE");
                 Console.Write("Calculating ratings...");
-                hfaRatingVector = hfaRating.GetRatings(matrix,
-                                                RatingObject.Conference);
+                hfaRatingVector = hfaRating.GetRatings(matrix, RatingObject.Conference);
                 homeFieldAdvantage = hfaRating.HomeFieldAdvantage;
                 hfaSSVector = ComputeConferenceScheduleStrength(interConferenceGames, group, hfaRatingVector);
                 Console.WriteLine("DONE");
@@ -253,33 +217,26 @@ namespace RatingSystem
 
             if (settings.ComputeMaxPointDifferentialRatings)
             {
-                MaxPointDifferentialRating mpdRating = new
-                                MaxPointDifferentialRating(entities, group,
-                                settings.MaxPointDifferential);
-                Console.WriteLine("\n{0} for group {1}",
-                                MaxPointDifferentialRating.RatingName, group);
+                MaxPointDifferentialRating mpdRating = new MaxPointDifferentialRating(entities, group, settings, settings.MaxPointDifferential);
+                Console.WriteLine("\n{0} for group {1}", MaxPointDifferentialRating.RatingName, group);
                 Console.Write("Creating conference matrix...");
                 matrix = mpdRating.CreateConferenceMatrix(interConferenceGames);
                 Console.WriteLine("DONE");
                 Console.Write("Calculating ratings...");
-                mpdRatingVector = mpdRating.GetRatings(matrix,
-                                                RatingObject.Conference);
+                mpdRatingVector = mpdRating.GetRatings(matrix, RatingObject.Conference);
                 mpdSSVector = ComputeConferenceScheduleStrength(interConferenceGames, group, mpdRatingVector);
                 Console.WriteLine("DONE");
             }
 
             if (settings.ComputeHensleyRatings)
             {
-                HensleyRating hensleyRating = new HensleyRating(entities, group,
-                                settings.LowerBounds, settings.UpperBounds);
-                Console.WriteLine("\n{0} for group {1}", HensleyRating.RatingName,
-                                group);
+                HensleyRating hensleyRating = new HensleyRating(entities, group, settings.LowerBounds, settings.UpperBounds, settings);
+                Console.WriteLine("\n{0} for group {1}", HensleyRating.RatingName, group);
                 Console.Write("Creating conference matrix...");
                 matrix = hensleyRating.CreateConferenceMatrix(interConferenceGames);
                 Console.WriteLine("DONE");
                 Console.Write("Calculating ratings...");
-                hensleyRatingVector = hensleyRating.GetRatings(matrix,
-                                                RatingObject.Conference);
+                hensleyRatingVector = hensleyRating.GetRatings(matrix, RatingObject.Conference);
                 hensleySSVector = ComputeConferenceScheduleStrength(interConferenceGames, group, hensleyRatingVector);
                 Console.WriteLine("DONE");
             }
@@ -287,17 +244,13 @@ namespace RatingSystem
             OutputResults(group, RatingObject.Conference, interConferenceGames);
         }
 
-        /// <summary>
-        /// Computes the rating types for divisions specified in the settings file.
-        /// </summary>
-        /// <param name="group">The group of divisions to process</param>
         public void ComputeDivisionRatings(int group)
         {
             double[][] matrix;
             IEnumerable<Game> interDivisionGames;
             stdSSVector = null; hfaSSVector = null; mpdSSVector = null; hensleySSVector = null;
 
-            interDivisionGames = entities.GetInterDivisionGames(group, settings.Year);
+            interDivisionGames = entities.GetInterDivisionGames(group, settings.Year, settings.CurrentCutoffDate);
 
             if (settings.ComputeStandardRatings
                 || settings.ComputeHomefieldAdvantageRatings
@@ -310,31 +263,26 @@ namespace RatingSystem
 
             if (settings.ComputeStandardRatings)
             {
-                StandardRating stdRating = new StandardRating(entities, group);
-                Console.WriteLine("\n{0} for group {1}", StandardRating.RatingName,
-                                group);
+                StandardRating stdRating = new StandardRating(entities, group, settings);
+                Console.WriteLine("\n{0} for group {1}", StandardRating.RatingName, group);
                 Console.Write("Creating division matrix...");
                 matrix = stdRating.CreateDivisionMatrix(interDivisionGames);
                 Console.WriteLine("DONE");
                 Console.Write("Calculating ratings...");
-                stdRatingVector = stdRating.GetRatings(matrix,
-                                                RatingObject.Division);
+                stdRatingVector = stdRating.GetRatings(matrix, RatingObject.Division);
                 stdSSVector = ComputeDivisionScheduleStrength(interDivisionGames, group, stdRatingVector);
                 Console.WriteLine("DONE");
             }
 
             if (settings.ComputeHomefieldAdvantageRatings)
             {
-                HomeFieldAdvantageRating hfaRating = new
-                                HomeFieldAdvantageRating(entities, group);
-                Console.WriteLine("\n{0} for group {1}",
-                                HomeFieldAdvantageRating.RatingName, group);
+                HomeFieldAdvantageRating hfaRating = new HomeFieldAdvantageRating(entities, group, settings);
+                Console.WriteLine("\n{0} for group {1}", HomeFieldAdvantageRating.RatingName, group);
                 Console.Write("Creating division matrix...");
                 matrix = hfaRating.CreateDivisionMatrix(interDivisionGames);
                 Console.WriteLine("DONE");
                 Console.Write("Calculating ratings...");
-                hfaRatingVector = hfaRating.GetRatings(matrix,
-                                                RatingObject.Division);
+                hfaRatingVector = hfaRating.GetRatings(matrix, RatingObject.Division);
                 homeFieldAdvantage = hfaRating.HomeFieldAdvantage;
                 hfaSSVector = ComputeDivisionScheduleStrength(interDivisionGames, group, hfaRatingVector);
                 Console.WriteLine("DONE");
@@ -342,33 +290,26 @@ namespace RatingSystem
 
             if (settings.ComputeMaxPointDifferentialRatings)
             {
-                MaxPointDifferentialRating mpdRating = new
-                                MaxPointDifferentialRating(entities, group,
-                                settings.MaxPointDifferential);
-                Console.WriteLine("\n{0} for group {1}",
-                                MaxPointDifferentialRating.RatingName, group);
+                MaxPointDifferentialRating mpdRating = new MaxPointDifferentialRating(entities, group, settings, settings.MaxPointDifferential);
+                Console.WriteLine("\n{0} for group {1}", MaxPointDifferentialRating.RatingName, group);
                 Console.Write("Creating division matrix...");
                 matrix = mpdRating.CreateDivisionMatrix(interDivisionGames);
                 Console.WriteLine("DONE");
                 Console.Write("Calculating ratings...");
-                mpdRatingVector = mpdRating.GetRatings(matrix,
-                                                RatingObject.Division);
+                mpdRatingVector = mpdRating.GetRatings(matrix, RatingObject.Division);
                 mpdSSVector = ComputeDivisionScheduleStrength(interDivisionGames, group, mpdRatingVector);
                 Console.WriteLine("DONE");
             }
 
             if (settings.ComputeHensleyRatings)
             {
-                HensleyRating hensleyRating = new HensleyRating(entities, group,
-                                settings.LowerBounds, settings.UpperBounds);
-                Console.WriteLine("\n{0} for group {1}", HensleyRating.RatingName,
-                                group);
+                HensleyRating hensleyRating = new HensleyRating(entities, group, settings.LowerBounds, settings.UpperBounds, settings);
+                Console.WriteLine("\n{0} for group {1}", HensleyRating.RatingName, group);
                 Console.Write("Creating division matrix...");
                 matrix = hensleyRating.CreateDivisionMatrix(interDivisionGames);
                 Console.WriteLine("DONE");
                 Console.Write("Calculating ratings...");
-                hensleyRatingVector = hensleyRating.GetRatings(matrix,
-                                                RatingObject.Division);
+                hensleyRatingVector = hensleyRating.GetRatings(matrix, RatingObject.Division);
                 hensleySSVector = ComputeDivisionScheduleStrength(interDivisionGames, group, hensleyRatingVector);
                 Console.WriteLine("DONE");
             }
@@ -376,15 +317,6 @@ namespace RatingSystem
             OutputResults(group, RatingObject.Division, interDivisionGames);
         }
 
-        /// <summary>
-        /// Writes the results to the specified CSV files and the results table in
-        /// the database.
-        /// </summary>
-        /// <param name="group">The group being processed</param>
-        /// <param name="ratingObject">
-        /// Specifies the type of object the rating applies to
-        /// </param>
-        /// <param name="games">The games being processed</param>
         public void OutputResults(int group, RatingObject ratingObject,
                                     IEnumerable<Game> games)
         {
@@ -399,19 +331,17 @@ namespace RatingSystem
             string displayName = String.Empty;
             IOrderedEnumerable<int> sortedKeys = null;
 
+            string weekDir = $"Output/Week {settings.CurrentWeek}";
             switch (ratingObject)
             {
                 case RatingObject.Team:
-                    fileName = String.Format("{0}_{1}.csv",
-                                            settings.TeamResultsOutputFile, group);
+                    fileName = $"{weekDir}/TeamResults_{group}.csv";
                     break;
                 case RatingObject.Conference:
-                    fileName = String.Format("{0}_{1}.csv",
-                                            settings.ConferenceResultsOutputFile, group);
+                    fileName = $"{weekDir}/ConferenceResults_{group}.csv";
                     break;
                 case RatingObject.Division:
-                    fileName = String.Format("{0}_{1}.csv",
-                                            settings.DivisionResultsOutputFile, group);
+                    fileName = $"{weekDir}/DivisionResults_{group}.csv";
                     break;
             }
 
@@ -425,7 +355,6 @@ namespace RatingSystem
                 {
                     headerLine = String.Format("{0},{1},ScheduleStrength", headerLine,
                                     StandardRating.RatingName);
-
                     sortedKeys = from k in stdRatingVector.Keys
                                  orderby stdRatingVector[k] descending
                                  select k;
@@ -435,7 +364,6 @@ namespace RatingSystem
                 {
                     headerLine = String.Format("{0},{1},ScheduleStrength", headerLine,
                                     HomeFieldAdvantageRating.RatingName);
-
                     sortedKeys = from k in hfaRatingVector.Keys
                                  orderby hfaRatingVector[k] descending
                                  select k;
@@ -445,7 +373,6 @@ namespace RatingSystem
                 {
                     headerLine = String.Format("{0},{1},ScheduleStrength", headerLine,
                                     MaxPointDifferentialRating.RatingName);
-
                     sortedKeys = from k in mpdRatingVector.Keys
                                  orderby mpdRatingVector[k] descending
                                  select k;
@@ -455,7 +382,6 @@ namespace RatingSystem
                 {
                     headerLine = String.Format("{0},{1},ScheduleStrength", headerLine,
                                     HensleyRating.RatingName);
-
                     sortedKeys = from k in hensleyRatingVector.Keys
                                  orderby hensleyRatingVector[k] descending
                                  select k;
@@ -464,9 +390,7 @@ namespace RatingSystem
                 sw.WriteLine(headerLine);
 
                 if (homeFieldAdvantage != 0)
-                {
                     sw.WriteLine("Home Field Advantage,{0:G15}", homeFieldAdvantage);
-                }
 
                 foreach (int key in sortedKeys)
                 {
@@ -475,16 +399,13 @@ namespace RatingSystem
                         case RatingObject.Team:
                             detailLine = WriteTeamResult(key);
                             break;
-
                         case RatingObject.Conference:
                             detailLine = WriteConferenceResult(key, games);
                             break;
-
                         case RatingObject.Division:
                             detailLine = WriteDivisionResult(key, games);
                             break;
                     }
-
                     sw.WriteLine(detailLine);
                     i++;
                 }
@@ -496,12 +417,10 @@ namespace RatingSystem
                 Console.WriteLine("\n{0}", ex.Message);
             }
 
-            // Write raw (Hensley-only, no ranks) CSV for teams
             if (ratingObject == RatingObject.Team && settings.ComputeHensleyRatings
                 && hensleyRatingVector != null && sortedKeys != null)
             {
-                string rawFileName = String.Format("{0}_Raw_{1}.csv",
-                                                   settings.TeamResultsOutputFile, group);
+                string rawFileName = $"{weekDir}/TeamResults_Raw_{group}.csv";
                 try
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(rawFileName));
@@ -510,11 +429,19 @@ namespace RatingSystem
                         foreach (int key in sortedKeys)
                         {
                             Team team = entities.Teams.First(t => t.ID == key);
+                            var homeGames = entities.Games.Where(g => g.HomeTeamID == key
+                                && g.Year == settings.Year && g.Date <= settings.CurrentCutoffDate).ToList();
+                            var awayGames = entities.Games.Where(g => g.AwayTeamID == key
+                                && g.Year == settings.Year && g.Date <= settings.CurrentCutoffDate).ToList();
+                            int wins   = homeGames.Count(g => g.HomeScore > g.AwayScore)
+                                       + awayGames.Count(g => g.AwayScore > g.HomeScore);
+                            int losses = homeGames.Count(g => g.HomeScore < g.AwayScore)
+                                       + awayGames.Count(g => g.AwayScore < g.HomeScore);
                             double hensleySS = hensleySSVector != null
                                                && hensleySSVector.ContainsKey(key)
                                                ? hensleySSVector[key] : 0.0;
                             rawSw.WriteLine("{0},{1},{2},{3},{4}",
-                                team.Name, team.Wins, team.Losses,
+                                team.Name, wins, losses,
                                 Math.Round(hensleyRatingVector[key], RoundDecimals),
                                 Math.Round(hensleySS, RoundDecimals));
                         }
@@ -538,34 +465,33 @@ namespace RatingSystem
             }
         }
 
-        /// <summary>
-        /// Writes a record to the team result table in the database.
-        /// </summary>
-        /// <param name="key">The ID of the team</param>
-        /// <returns>A comma delimited representation of the data</returns>
         private string WriteTeamResult(int key)
         {
             Team team = entities.Teams.First(t => t.ID == key);
             TeamResult teamResult;
-            String detailLine = String.Format("{0} ({1}-{2})", team.Name, team.Wins,
-                                            team.Losses);
+
+            var homeGames = entities.Games.Where(g => g.HomeTeamID == key
+                && g.Year == settings.Year && g.Date <= settings.CurrentCutoffDate).ToList();
+            var awayGames = entities.Games.Where(g => g.AwayTeamID == key
+                && g.Year == settings.Year && g.Date <= settings.CurrentCutoffDate).ToList();
+            int wins   = homeGames.Count(g => g.HomeScore > g.AwayScore)
+                       + awayGames.Count(g => g.AwayScore > g.HomeScore);
+            int losses = homeGames.Count(g => g.HomeScore < g.AwayScore)
+                       + awayGames.Count(g => g.AwayScore < g.HomeScore);
+
+            String detailLine = String.Format("{0} ({1}-{2})", team.Name, wins, losses);
 
             teamResult = entities.TeamResults.FirstOrDefault(tr => tr.TeamID == key
                                                                 && tr.Year == settings.Year
-                                                                && tr.Week == settings.Week);
+                                                                && tr.Week == settings.CurrentWeek);
             if (teamResult == null)
             {
-                teamResult = new TeamResult { TeamID = key, Year = settings.Year, Week = settings.Week };
+                teamResult = new TeamResult { TeamID = key, Year = settings.Year, Week = settings.CurrentWeek };
                 entities.TeamResults.Add(teamResult);
             }
 
-            // Use year-filtered game lists so W-L counts reflect only this season
-            var homeGames = entities.Games.Where(g => g.HomeTeamID == key && g.Year == settings.Year).ToList();
-            var awayGames = entities.Games.Where(g => g.AwayTeamID == key && g.Year == settings.Year).ToList();
-            teamResult.Wins   = homeGames.Count(g => g.HomeScore > g.AwayScore)
-                              + awayGames.Count(g => g.AwayScore > g.HomeScore);
-            teamResult.Losses = homeGames.Count(g => g.HomeScore < g.AwayScore)
-                              + awayGames.Count(g => g.AwayScore < g.HomeScore);
+            teamResult.Wins   = wins;
+            teamResult.Losses = losses;
 
             if (settings.ComputeStandardRatings)
             {
@@ -574,8 +500,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(stdRatingVector[key], RoundDecimals),
                                         stdRatingVector.Where(k => k.Value > stdRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 teamResult.StandardRating = stdRatingVector[key];
             }
 
@@ -586,8 +511,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(hfaRatingVector[key], RoundDecimals),
                                         hfaRatingVector.Where(k => k.Value > hfaRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 teamResult.HomefieldAdvantageRating = hfaRatingVector[key];
             }
 
@@ -598,8 +522,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(mpdRatingVector[key], RoundDecimals),
                                         mpdRatingVector.Where(k => k.Value > mpdRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 teamResult.MaxPointDifferentialRating = mpdRatingVector[key];
             }
 
@@ -610,8 +533,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(hensleyRatingVector[key], RoundDecimals),
                                         hensleyRatingVector.Where(k => k.Value > hensleyRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 teamResult.HensleyRating = hensleyRatingVector[key];
             }
 
@@ -624,28 +546,20 @@ namespace RatingSystem
             return detailLine;
         }
 
-        /// <summary>
-        /// Writes a record to the conference result table in the database.
-        /// </summary>
-        /// <param name="key">The ID of the conference</param>
-        /// <param name="interConferenceGames">The games being processes</param>
-        /// <returns>A comma delimited representation of the data</returns>
-        private string WriteConferenceResult(int key,
-                                            IEnumerable<Game> interConferenceGames)
+        private string WriteConferenceResult(int key, IEnumerable<Game> interConferenceGames)
         {
             Conference conference = entities.Conferences.First(c => c.ID == key);
             ConferenceResult conferenceResult;
             int wins = entities.GetWins(interConferenceGames, conference);
             int losses = entities.GetLosses(interConferenceGames, conference);
-            String detailLine = String.Format("{0} ({1}-{2})", conference.Name,
-                                            wins, losses);
+            String detailLine = String.Format("{0} ({1}-{2})", conference.Name, wins, losses);
 
             conferenceResult = entities.ConferenceResults.FirstOrDefault(cr => cr.ConferenceID == key
                                                                               && cr.Year == settings.Year
-                                                                              && cr.Week == settings.Week);
+                                                                              && cr.Week == settings.CurrentWeek);
             if (conferenceResult == null)
             {
-                conferenceResult = new ConferenceResult { ConferenceID = key, Year = settings.Year, Week = settings.Week };
+                conferenceResult = new ConferenceResult { ConferenceID = key, Year = settings.Year, Week = settings.CurrentWeek };
                 entities.ConferenceResults.Add(conferenceResult);
             }
 
@@ -659,8 +573,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(stdRatingVector[key], RoundDecimals),
                                         stdRatingVector.Where(k => k.Value > stdRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 conferenceResult.StandardRating = stdRatingVector[key];
             }
 
@@ -671,8 +584,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(hfaRatingVector[key], RoundDecimals),
                                         hfaRatingVector.Where(k => k.Value > hfaRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 conferenceResult.HomefieldAdvantageRating = hfaRatingVector[key];
             }
 
@@ -683,8 +595,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(mpdRatingVector[key], RoundDecimals),
                                         mpdRatingVector.Where(k => k.Value > mpdRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 conferenceResult.MaxPointDifferentialRating = mpdRatingVector[key];
             }
 
@@ -695,8 +606,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(hensleyRatingVector[key], RoundDecimals),
                                         hensleyRatingVector.Where(k => k.Value > hensleyRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 conferenceResult.HensleyRating = hensleyRatingVector[key];
             }
 
@@ -706,28 +616,20 @@ namespace RatingSystem
             return detailLine;
         }
 
-        /// <summary>
-        /// Writes a record to the division result table in the database.
-        /// </summary>
-        /// <param name="key">The ID of the division</param>
-        /// <param name="interDivisionGames">The games being processes</param>
-        /// <returns>A comma delimited representation of the data</returns>
-        private string WriteDivisionResult(int key,
-                                            IEnumerable<Game> interDivisionGames)
+        private string WriteDivisionResult(int key, IEnumerable<Game> interDivisionGames)
         {
             Division division = entities.Divisions.First(c => c.ID == key);
             DivisionResult divisionResult;
             int wins = entities.GetWins(interDivisionGames, division);
             int losses = entities.GetLosses(interDivisionGames, division);
-            String detailLine = String.Format("{0} ({1}-{2})", division.Name, wins,
-                                            losses);
+            String detailLine = String.Format("{0} ({1}-{2})", division.Name, wins, losses);
 
             divisionResult = entities.DivisionResults.FirstOrDefault(dr => dr.DivisionID == key
                                                                           && dr.Year == settings.Year
-                                                                          && dr.Week == settings.Week);
+                                                                          && dr.Week == settings.CurrentWeek);
             if (divisionResult == null)
             {
-                divisionResult = new DivisionResult { DivisionID = key, Year = settings.Year, Week = settings.Week };
+                divisionResult = new DivisionResult { DivisionID = key, Year = settings.Year, Week = settings.CurrentWeek };
                 entities.DivisionResults.Add(divisionResult);
             }
 
@@ -741,8 +643,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(stdRatingVector[key], RoundDecimals),
                                         stdRatingVector.Where(k => k.Value > stdRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 divisionResult.StandardRating = stdRatingVector[key];
             }
 
@@ -753,8 +654,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(hfaRatingVector[key], RoundDecimals),
                                         hfaRatingVector.Where(k => k.Value > hfaRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 divisionResult.HomefieldAdvantageRating = hfaRatingVector[key];
             }
 
@@ -765,8 +665,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(mpdRatingVector[key], RoundDecimals),
                                         mpdRatingVector.Where(k => k.Value > mpdRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 divisionResult.MaxPointDifferentialRating = mpdRatingVector[key];
             }
 
@@ -777,8 +676,7 @@ namespace RatingSystem
                 detailLine = String.Format("{0},{1} ({2}),{3} ({4})", detailLine,
                                         Math.Round(hensleyRatingVector[key], RoundDecimals),
                                         hensleyRatingVector.Where(k => k.Value > hensleyRatingVector[key]).Count() + 1,
-                                        Math.Round(ss, RoundDecimals),
-                                        ssRank);
+                                        Math.Round(ss, RoundDecimals), ssRank);
                 divisionResult.HensleyRating = hensleyRatingVector[key];
             }
 
@@ -793,9 +691,12 @@ namespace RatingSystem
             var result = new Dictionary<int, double>();
             foreach (var team in entities.Teams.Where(t => t.Group == group))
             {
-                // Per-game average: count a repeat opponent once per game played
-                var oppRatings = team.HomeGames.Select(g => g.AwayTeam)
-                    .Concat(team.AwayGames.Select(g => g.HomeTeam))
+                var oppRatings = team.HomeGames
+                    .Where(g => g.Year == settings.Year && g.Date <= settings.CurrentCutoffDate)
+                    .Select(g => g.AwayTeam)
+                    .Concat(team.AwayGames
+                        .Where(g => g.Year == settings.Year && g.Date <= settings.CurrentCutoffDate)
+                        .Select(g => g.HomeTeam))
                     .Where(o => ratingVector.ContainsKey(o.ID))
                     .Select(o => ratingVector[o.ID])
                     .ToList();

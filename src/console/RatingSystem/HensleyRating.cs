@@ -71,6 +71,14 @@ namespace RatingSystem
             lowerBounds = _lowerBounds;
         }
 
+        public HensleyRating(CollegeFootballEntities _entities, int _group,
+                              double _lowerBounds, double _upperBounds, RatingSettings _settings)
+            : base(_entities, _group, _settings)
+        {
+            upperBounds = _upperBounds;
+            lowerBounds = _lowerBounds;
+        }
+
         /// <summary>
         /// Populates the rating matrix to be solved for teams.
         /// </summary>
@@ -80,25 +88,23 @@ namespace RatingSystem
             int rowCount = 0;
             int gameCount = 0;
             double[][] matrix = new double[teamCount + 1][];
-            IEnumerable<Game> groupGames = entities.GetGames(group, ratingSettings.Year);
+            IEnumerable<Game> groupGames = entities.GetGames(group, ratingSettings.Year, ratingSettings.CurrentCutoffDate);
 
             matrix[teamCount] = new double[teamCount + 2];
             foreach (Team team in entities.Teams.Where(t => t.Group ==
                             group).OrderBy(t => t.ID))
             {
-                gameCount = team.Games.Count();
+                var homeGames = GetTeamHomeGames(team);
+                var awayGames = GetTeamAwayGames(team);
+                gameCount = homeGames.Count + awayGames.Count;
+                int hgd = homeGames.Count(g => !g.IsNeutralSite) - awayGames.Count(g => !g.IsNeutralSite);
+                double hpd = ComputeHensleyPD(homeGames, awayGames, lowerBounds, upperBounds);
+
                 matrix[rowCount] = new double[teamCount + 2];
-
-                // Second to last column is home game differential
-                matrix[rowCount][teamCount] = team.HomeGameDifferential;
-                matrix[teamCount][rowCount] = team.HomeGameDifferential;
-
-                // Diaganol value is the number of games played
+                matrix[rowCount][teamCount] = hgd;
+                matrix[teamCount][rowCount] = hgd;
                 matrix[rowCount][teamIDMapping[team.ID]] = gameCount;
-
-                // Right hand side of every line is the calculated score margin
-                matrix[rowCount][teamCount + 1] =
-                        team.GetHensleyPointDifferential(lowerBounds, upperBounds);
+                matrix[rowCount][teamCount + 1] = hpd;
                 rowCount++;
             }
             matrix[teamCount][teamCount] = entities.GetHomeGameCount(groupGames);
@@ -145,7 +151,7 @@ namespace RatingSystem
             foreach (Conference conference in entities.Conferences.Where(c =>
                             c.Group == group).OrderBy(c => c.ID))
             {
-                conferenceGames = entities.GetGames(conference);
+                conferenceGames = entities.GetGames(conference, ratingSettings.Year, ratingSettings.CurrentCutoffDate);
                 gameCount = conferenceGames.Count();
 
                 matrix[rowCount] = new double[conferenceCount + 2];
@@ -213,7 +219,7 @@ namespace RatingSystem
             foreach (Division division in entities.Divisions.Where(d => d.Group ==
                             group).OrderBy(d => d.ID))
             {
-                divisionGames = entities.GetGames(division);
+                divisionGames = entities.GetGames(division, ratingSettings.Year, ratingSettings.CurrentCutoffDate);
                 gameCount = divisionGames.Count();
 
                 matrix[rowCount] = new double[divisionCount + 2];
@@ -258,6 +264,29 @@ namespace RatingSystem
             matrix[divisionCount - 1][divisionCount + 1] = 0;
 
             return matrix;
+        }
+
+        private static double ComputeHensleyPD(IList<Game> homeGames, IList<Game> awayGames,
+                                                double lb, double ub)
+        {
+            double total = 0;
+            foreach (var g in homeGames)
+            {
+                bool isWinner = g.HomeScore > g.AwayScore;
+                double w = isWinner ? g.HomeScore : g.AwayScore;
+                double l = isWinner ? g.AwayScore : g.HomeScore;
+                double score = Game.GetHensleyPointDifferentialScore(w, l, lb, ub);
+                total += isWinner ? score : -score;
+            }
+            foreach (var g in awayGames)
+            {
+                bool isWinner = g.AwayScore > g.HomeScore;
+                double w = isWinner ? g.AwayScore : g.HomeScore;
+                double l = isWinner ? g.HomeScore : g.AwayScore;
+                double score = Game.GetHensleyPointDifferentialScore(w, l, lb, ub);
+                total += isWinner ? score : -score;
+            }
+            return total;
         }
     }
 }

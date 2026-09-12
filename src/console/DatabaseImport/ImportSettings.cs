@@ -8,8 +8,8 @@ namespace DataImport
         public bool ImportGames = true;
         public bool ImportWeekSettings = true;
         public bool CreateGroups = true;
+        public bool WipeDbOnStart;
         public int Year;
-        public int Week;
         public string TeamsFileName;
         public string GamesFileName = "converted-games.csv";
         public string WeekSettingsFileName;
@@ -22,8 +22,8 @@ namespace DataImport
             if (!int.TryParse(Environment.GetEnvironmentVariable("SEASON_YEAR"), out Year))
                 Year = DateTime.Now.Year;
 
-            if (!int.TryParse(Environment.GetEnvironmentVariable("WEEK"), out Week))
-                Week = 1;
+            WipeDbOnStart = !(Environment.GetEnvironmentVariable("WIPE_DB_ON_START") ?? "true")
+                              .Equals("false", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

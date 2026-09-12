@@ -1,37 +1,20 @@
-/* DivisionGraph.cs
- * Joel Hensley
- * February 9, 2010
- * This class is used to identify and store the different division
- * groups in the database. A division is connected to another division
- * if there is a series of games for any of the teams in that division
- * that connects to any of the teams in another division.
- */
 using System.Collections.Generic;
 using System.Linq;
-using DatabaseLayer;
 using Microsoft.EntityFrameworkCore;
 
-namespace DataImport
+namespace DatabaseLayer
 {
-    class DivisionGraph
+    public class DivisionGraph
     {
         private CollegeFootballEntities entities = null;
         private List<int> visitedGroups = null;
 
-        /// <summary>
-        /// Default constructor
-        /// </summary>
-        /// <param name="_entities">The database object</param>
         public DivisionGraph(CollegeFootballEntities _entities)
         {
             entities = _entities;
             visitedGroups = new List<int>();
         }
 
-        /// <summary>
-        /// Loops through all the divisions in the database until all
-        /// divisions are included in some group.
-        /// </summary>
         public void CreateDivisionGroups()
         {
             Division division;
@@ -47,12 +30,6 @@ namespace DataImport
             }
         }
 
-        /// <summary>
-        /// Recursively loops through a given division's distinct set of team groups
-        /// to find other divisions with at least one team in that group.
-        /// </summary>
-        /// <param name="team">The division being examined</param>
-        /// <param name="group">The group the division belongs to</param>
         private void ConnectDivisions(Division division, int group)
         {
             List<Division> groupDivisions;
@@ -69,10 +46,7 @@ namespace DataImport
             foreach (int teamGroup in groupList)
             {
                 if (visitedGroups.Contains(teamGroup))
-                {
-                    // We've already visited that group
                     continue;
-                }
 
                 visitedGroups.Add(teamGroup);
 
@@ -85,14 +59,61 @@ namespace DataImport
 
                 foreach (Division otherDivision in groupDivisions)
                 {
-                    // Its possible the division has already been examined
-                    // so we don't want to call the recursive method if so.
                     entities.Entry(otherDivision).Reload();
-
                     if (otherDivision.Group == null)
-                    {
                         ConnectDivisions(otherDivision, group);
-                    }
+                }
+            }
+        }
+
+        public static void AssignGroups(IList<Division> divisions, IList<Conference> conferences, IList<Team> teams)
+        {
+            int group = 1;
+            foreach (var division in divisions)
+            {
+                if (division.Group == null)
+                {
+                    var visited = new HashSet<int>();
+                    ConnectDivisionsInMemory(division, group, divisions, conferences, teams, visited);
+                    group++;
+                }
+            }
+        }
+
+        private static void ConnectDivisionsInMemory(Division div, int group,
+            IList<Division> divisions, IList<Conference> conferences, IList<Team> teams,
+            HashSet<int> visited)
+        {
+            div.Group = group;
+
+            var teamGroups = teams
+                .Where(t => t.Group.HasValue)
+                .Where(t => {
+                    var conf = conferences.FirstOrDefault(c => c.ID == t.ConferenceID);
+                    return conf != null && conf.DivisionID == div.ID;
+                })
+                .Select(t => t.Group.Value)
+                .Distinct()
+                .ToList();
+
+            foreach (int teamGroup in teamGroups)
+            {
+                if (!visited.Add(teamGroup))
+                    continue;
+
+                var otherDivIds = teams
+                    .Where(t => t.Group == teamGroup)
+                    .Select(t => conferences.FirstOrDefault(c => c.ID == t.ConferenceID)?.DivisionID)
+                    .Where(did => did.HasValue && did.Value != div.ID)
+                    .Select(did => did.Value)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var otherId in otherDivIds)
+                {
+                    var other = divisions.FirstOrDefault(d => d.ID == otherId && d.Group == null);
+                    if (other != null)
+                        ConnectDivisionsInMemory(other, group, divisions, conferences, teams, visited);
                 }
             }
         }

@@ -34,6 +34,12 @@ namespace RatingSystem
         {
         }
 
+        public HomeFieldAdvantageRating(CollegeFootballEntities _entities,
+                                        int _group, RatingSettings _settings)
+            : base(_entities, _group, _settings)
+        {
+        }
+
         /// <summary>
         /// Calls GaussJordanElimination to solve the matrix and then maps the
         /// results back to their team, conference, or division IDs. The last
@@ -110,7 +116,7 @@ namespace RatingSystem
             double[][] matrix = new double[teamCount + 1][];
             IEnumerable<Game> groupGames;
 
-            groupGames = entities.GetGames(group, ratingSettings.Year);
+            groupGames = entities.GetGames(group, ratingSettings.Year, ratingSettings.CurrentCutoffDate);
 
             // Pre-allocate the HFA equation row (row teamCount)
             matrix[teamCount] = new double[teamCount + 2];
@@ -118,20 +124,18 @@ namespace RatingSystem
             foreach (Team team in entities.Teams.Where(t => t.Group ==
                             group).OrderBy(t => t.ID))
             {
-                gameCount = team.Games.Count();
+                var homeGames = GetTeamHomeGames(team);
+                var awayGames = GetTeamAwayGames(team);
+                gameCount = homeGames.Count + awayGames.Count;
+                int hgd = homeGames.Count(g => !g.IsNeutralSite) - awayGames.Count(g => !g.IsNeutralSite);
+                double pd = homeGames.Sum(g => g.HomeScore - g.AwayScore)
+                          + awayGames.Sum(g => g.AwayScore - g.HomeScore);
+
                 matrix[rowCount] = new double[teamCount + 2];
-
-                // Diaganol value is the number of games played
                 matrix[teamIDMapping[team.ID]][teamIDMapping[team.ID]] = gameCount;
-
-                // Second to last column is the home game differential
-                matrix[rowCount][teamCount] = team.HomeGameDifferential;
-
-                // Symmetric: this team's rating coefficient in the HFA equation
-                matrix[teamCount][rowCount] = team.HomeGameDifferential;
-
-                // Right hand side of every line is total score margin
-                matrix[rowCount][teamCount + 1] = team.PointDifferential;
+                matrix[rowCount][teamCount] = hgd;
+                matrix[teamCount][rowCount] = hgd;
+                matrix[rowCount][teamCount + 1] = pd;
                 rowCount++;
             }
 
@@ -179,7 +183,7 @@ namespace RatingSystem
             foreach (Conference conference in entities.Conferences.Where(c =>
                             c.Group == group).OrderBy(c => c.ID))
             {
-                conferenceGames = entities.GetGames(conference);
+                conferenceGames = entities.GetGames(conference, ratingSettings.Year, ratingSettings.CurrentCutoffDate);
                 gameCount = conferenceGames.Count();
 
                 matrix[rowCount] = new double[conferenceCount + 2];
@@ -250,7 +254,7 @@ namespace RatingSystem
             foreach (Division division in entities.Divisions.Where(d => d.Group ==
                             group).OrderBy(d => d.ID))
             {
-                divisionGames = entities.GetGames(division);
+                divisionGames = entities.GetGames(division, ratingSettings.Year, ratingSettings.CurrentCutoffDate);
                 gameCount = divisionGames.Count();
 
                 matrix[rowCount] = new double[divisionCount + 2];

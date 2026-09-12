@@ -46,6 +46,16 @@ namespace RatingSystem
             CreateDivisionIDMapping();
         }
 
+        public StandardRating(CollegeFootballEntities _entities, int _group, RatingSettings _settings)
+        {
+            entities = _entities;
+            group = _group;
+            ratingSettings = _settings;
+            CreateTeamIDMapping();
+            CreateConferenceIDMapping();
+            CreateDivisionIDMapping();
+        }
+
         /// <summary>
         /// Calls GaussJordanElimination to solve the matrix and then maps the
         /// results back to their team, conference, or division IDs.
@@ -87,6 +97,12 @@ namespace RatingSystem
 
             return ratingDictionary;
         }
+
+        protected IList<Game> GetTeamHomeGames(Team team)
+            => team.HomeGames.Where(g => g.Year == ratingSettings.Year && g.Date <= ratingSettings.CurrentCutoffDate).ToList();
+
+        protected IList<Game> GetTeamAwayGames(Team team)
+            => team.AwayGames.Where(g => g.Year == ratingSettings.Year && g.Date <= ratingSettings.CurrentCutoffDate).ToList();
 
         /// <summary>
         /// Creates a mapping of team IDs to matrix row numbers
@@ -143,34 +159,31 @@ namespace RatingSystem
         public virtual double[][] CreateTeamMatrix()
         {
             int rowCount = 0;
-            int gameCount = 0;
             double[][] matrix = new double[teamCount][];
 
             foreach (Team team in entities.Teams.Where(t => t.Group ==
                             group).OrderBy(t => t.ID))
             {
-                gameCount = team.Games.Count();
+                var homeGames = GetTeamHomeGames(team);
+                var awayGames = GetTeamAwayGames(team);
+                int gameCount = homeGames.Count + awayGames.Count;
+                double pd = homeGames.Sum(g => g.HomeScore - g.AwayScore)
+                          + awayGames.Sum(g => g.AwayScore - g.HomeScore);
+
                 matrix[rowCount] = new double[teamCount + 1];
-
-                // Diaganol value is the number of games played
                 matrix[teamIDMapping[team.ID]][teamIDMapping[team.ID]] = gameCount;
-
-                // Right hand side of every line is total score margin
-                matrix[rowCount][teamCount] = team.PointDifferential;
+                matrix[rowCount][teamCount] = pd;
                 rowCount++;
             }
 
-            foreach (Game game in entities.GetGames(group, ratingSettings.Year))
+            foreach (Game game in entities.GetGames(group, ratingSettings.Year, ratingSettings.CurrentCutoffDate))
             {
                 matrix[teamIDMapping[game.HomeTeamID]][teamIDMapping[game.AwayTeamID]] -= 1;
                 matrix[teamIDMapping[game.AwayTeamID]][teamIDMapping[game.HomeTeamID]] -= 1;
             }
 
-            // Last row should be all ones and then a zero for RHS
             for (int col = 0; col < teamCount; col++)
-            {
                 matrix[teamCount - 1][col] = 1;
-            }
             matrix[teamCount - 1][teamCount] = 0;
 
             return matrix;
@@ -194,7 +207,7 @@ namespace RatingSystem
             foreach (Conference conference in entities.Conferences.Where(c =>
                             c.Group == group).OrderBy(c => c.ID))
             {
-                conferenceGames = entities.GetGames(conference);
+                conferenceGames = entities.GetGames(conference, ratingSettings.Year, ratingSettings.CurrentCutoffDate);
                 gameCount = conferenceGames.Count();
 
                 matrix[rowCount] = new double[conferenceCount + 1];
@@ -245,7 +258,7 @@ namespace RatingSystem
             foreach (Division division in entities.Divisions.Where(d => d.Group ==
                             group).OrderBy(d => d.ID))
             {
-                divisionGames = entities.GetGames(division);
+                divisionGames = entities.GetGames(division, ratingSettings.Year, ratingSettings.CurrentCutoffDate);
                 gameCount = divisionGames.Count();
 
                 matrix[rowCount] = new double[divisionCount + 1];
