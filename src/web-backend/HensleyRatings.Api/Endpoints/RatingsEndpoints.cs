@@ -119,11 +119,14 @@ public static class RatingsEndpoints
                 if (prevOverallRank != null && prevOverallRank.TryGetValue(r.TeamID, out var prevRank))
                     change = prevRank - overall; // positive = moved up
 
+                var confId = aff?.ConferenceID ?? 0;
                 return new RatedTeam(
                     r.TeamID,
                     r.Team?.Name ?? "",
                     confName,
+                    confId,
                     divName,
+                    divId,
                     r.Wins,
                     r.Losses,
                     r.HensleyRating,

@@ -18,12 +18,12 @@ public static class MetaEndpoints
             return Results.Ok(new MetaYearsResponse(years));
         });
 
-        app.MapGet("/api/meta/weeks", async (int year, CollegeFootballEntities db) =>
+        app.MapGet("/api/meta/weeks", async (int year, bool? allWeeks, CollegeFootballEntities db) =>
         {
-            var weeks = await db.WeekSettings
-                .Where(ws => ws.Year == year)
-                .OrderBy(ws => ws.Week)
-                .ToListAsync();
+            IQueryable<WeekSettings> query = db.WeekSettings.Where(ws => ws.Year == year);
+            if (allWeeks != true)
+                query = query.Where(ws => db.TeamResults.Any(tr => tr.Year == year && tr.Week == ws.Week));
+            var weeks = await query.OrderBy(ws => ws.Week).ToListAsync();
 
             var options = weeks.Select((ws, i) => new WeekOption(
                 ws.Week,
@@ -36,7 +36,8 @@ public static class MetaEndpoints
         app.MapGet("/api/meta/divisions", async (CollegeFootballEntities db) =>
         {
             var divisions = await db.Divisions
-                .OrderBy(d => d.Name)
+                .Where(d => d.Name != "Other")
+                .OrderBy(d => d.ID)
                 .Select(d => new DivisionResponse(d.ID, d.Name))
                 .ToListAsync();
             return Results.Ok(divisions);
@@ -50,12 +51,11 @@ public static class MetaEndpoints
             if (divisionId.HasValue)
                 query = query.Where(ca => ca.DivisionID == divisionId.Value);
 
-            var conferences = await query
+            var raw = await query
                 .Select(ca => new ConferenceResponse(ca.ConferenceID, ca.Conference.Name, ca.DivisionID))
-                .Distinct()
-                .OrderBy(c => c.Name)
                 .ToListAsync();
 
+            var conferences = raw.DistinctBy(c => c.ConferenceId).OrderBy(c => c.Name).ToList();
             return Results.Ok(conferences);
         });
     }

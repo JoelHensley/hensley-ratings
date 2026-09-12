@@ -27,9 +27,16 @@ export default function App() {
       </nav>
       <Routes>
         <Route path="/" element={<Navigate to="/ratings" replace />} />
+
+        {/* Splat routes — all path-param parsing happens inside the component */}
         <Route path="/ratings" element={<Ratings />} />
+        <Route path="/ratings/*" element={<Ratings />} />
         <Route path="/schedule" element={<Schedule />} />
+        <Route path="/schedule/*" element={<Schedule />} />
+
+        {/* Legacy route kept for any existing bookmarks / internal links */}
         <Route path="/teams/:id" element={<Team />} />
+
         <Route path="/theory" element={<Theory />} />
       </Routes>
     </>

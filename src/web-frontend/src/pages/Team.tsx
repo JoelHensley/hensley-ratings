@@ -1,14 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
+import { buildRatingsPath } from '../util/paths'
 import { slugify } from '../util/slugify'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export default function Team() {
-  const { id } = useParams<{ id: string }>()
+interface TeamProps { teamId?: number; year?: number }
+export default function Team({ teamId: propTeamId, year: propYear }: TeamProps = {}) {
+  const { id } = useParams<{ id?: string }>()
   const [params] = useSearchParams()
 
   const { data: yearsData } = useQuery({
@@ -17,12 +19,13 @@ export default function Team() {
   })
 
   const latestAvailableYear = yearsData?.years[0] ?? new Date().getFullYear()
-  const year = Number(params.get('year') ?? latestAvailableYear)
+  const effectiveId = propTeamId ?? (id ? Number(id) : undefined)
+  const year = propYear ?? Number(params.get('year') ?? latestAvailableYear)
 
   const { data: team, isLoading, error } = useQuery({
-    queryKey: ['team', id, year],
-    queryFn: () => api.team(Number(id), year),
-    enabled: !!id,
+    queryKey: ['team', effectiveId, year],
+    queryFn: () => api.team(effectiveId!, year),
+    enabled: !!effectiveId,
   })
 
   if (isLoading) return <main className="page"><div className="loading">Loading team…</div></main>
@@ -38,7 +41,10 @@ export default function Team() {
   return (
     <main className="page">
       <div style={{ marginBottom: 8, fontSize: 13 }}>
-        <Link to={`/ratings?year=${year}`} style={{ color: 'var(--muted)' }}>
+        <Link
+          to={buildRatingsPath(year, undefined, team.divisionId ? { id: team.divisionId, name: team.divisionName } : undefined)}
+          style={{ color: 'var(--muted)' }}
+        >
           Ratings
         </Link>
         {' / '}
