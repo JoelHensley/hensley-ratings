@@ -134,6 +134,29 @@ body {
 }
 
 /* ─── Week navigation ────────────────────────────────────────────────── */
+/* ─── Year picker ────────────────────────────────────────────────────── */
+.year-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.year-nav span + span::before {
+  content: ' | ';
+  color: var(--muted);
+}
+.year-link {
+  color: var(--muted);
+  text-decoration: none;
+}
+.year-link:hover { color: var(--accent); }
+.year-link.active {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 .week-nav {
   display: flex;
   gap: 6px;
@@ -230,7 +253,8 @@ body {
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
-.ratings-table td:first-child { text-align: left; }
+.ratings-table td:first-child,
+.ratings-table td.left { text-align: left; }
 .ratings-table tr:last-child td { border-bottom: none; }
 .ratings-table tr:nth-child(even) td { background: var(--table-alt); }
 .ratings-table tr:hover td { background: rgba(184,99,42,0.04); }

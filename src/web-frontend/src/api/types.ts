@@ -2,7 +2,9 @@ export interface RatedTeam {
   teamId: number
   name: string
   conferenceName: string
+  conferenceId: number
   divisionName: string
+  divisionId: number
   wins: number
   losses: number
   hensleyRating: number
@@ -59,7 +61,9 @@ export interface TeamDetail {
   teamId: number
   name: string
   conferenceName: string
+  conferenceId: number
   divisionName: string
+  divisionId: number
   wins: number
   losses: number
   hensleyRating: number

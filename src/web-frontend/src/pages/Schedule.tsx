@@ -1,8 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { ScheduleGame } from '../api/types'
+import { buildSchedulePath } from '../util/paths'
+import { parseRatingsPath } from '../util/parseRatingsPath'
 import { slugify } from '../util/slugify'
+
+const DIV_ABBREV: Record<string, string> = { 'Division-II': 'D-II', 'Division-III': 'D-III' }
+const shortDivName = (name: string) => DIV_ABBREV[name] ?? name
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -23,7 +29,9 @@ function groupByDate(games: ScheduleGame[]) {
 }
 
 export default function Schedule() {
-  const [params, setParams] = useSearchParams()
+  const { '*': splat } = useParams()
+  const parsed = parseRatingsPath(splat)
+  const nav = useNavigate()
 
   const { data: yearsData } = useQuery({
     queryKey: ['years'],
@@ -31,13 +39,14 @@ export default function Schedule() {
   })
 
   const latestAvailableYear = yearsData?.years[0] ?? new Date().getFullYear()
-  const year = Number(params.get('year') ?? latestAvailableYear)
-  const week = Number(params.get('week') ?? 0)
-  const divisionId = params.get('divisionId') ? Number(params.get('divisionId')) : undefined
+  const year = parsed.year ?? latestAvailableYear
+  const divisionId = parsed.divId
+  const weekFromUrl = parsed.week ?? 0
 
+  // Schedule shows ALL weeks (including ones without ratings)
   const { data: weeksData } = useQuery({
-    queryKey: ['weeks', year],
-    queryFn: () => api.weeks(year),
+    queryKey: ['weeks-all', year],
+    queryFn: () => api.weeks(year, true),
     enabled: !!yearsData,
   })
 
@@ -48,7 +57,7 @@ export default function Schedule() {
 
   const availableWeeks = weeksData?.weeks ?? []
   const latestWeek = availableWeeks.at(-1)?.week ?? 0
-  const activeWeek = week > 0 ? week : latestWeek
+  const activeWeek = weekFromUrl > 0 ? weekFromUrl : latestWeek
 
   const { data: games, isLoading, error } = useQuery({
     queryKey: ['schedule', year, activeWeek, divisionId],
@@ -56,19 +65,15 @@ export default function Schedule() {
     enabled: activeWeek > 0,
   })
 
-  const navigate = (updates: Record<string, string | undefined>) => {
-    const next = new URLSearchParams(params)
-    for (const [k, v] of Object.entries(updates)) {
-      if (v === undefined) next.delete(k)
-      else next.set(k, v)
-    }
-    setParams(next)
-  }
-
   const divisions = divisionsData ?? []
+  const activeDivision = divisions.find((d) => d.divisionId === divisionId)
+  const divisionName = activeDivision?.name ?? 'All'
+
+  const goTo = (toYear: number, toWeek: number | undefined, toDiv?: { id: number; name: string }) =>
+    nav(buildSchedulePath(toYear, toWeek, toDiv))
+
   const grouped = games ? groupByDate(games) : new Map()
 
-  // "Game of the Week" = lowest sum of ranks (both teams highest-rated)
   const gotw = games?.filter((g) => g.isComplete).reduce<ScheduleGame | null>((best, g) => {
     if (!g.homeTeamRank || !g.awayTeamRank) return best
     const score = g.homeTeamRank + g.awayTeamRank
@@ -77,11 +82,31 @@ export default function Schedule() {
     return score < bestScore ? g : best
   }, null)
 
+  useEffect(() => {
+    document.title = `${divisionName} Schedule | Week ${activeWeek} | ${year} | Hensley Ratings`
+  }, [divisionName, activeWeek, year])
+
   return (
     <main className="page">
       <h1 className="page-heading">
         Schedule &amp; Results{activeWeek > 0 && ` — Week ${activeWeek}`}
       </h1>
+
+      {/* Year picker */}
+      {yearsData && yearsData.years.length > 1 && (
+        <div className="year-nav">
+          {yearsData.years.slice().reverse().map((y) => (
+            <span key={y}>
+              <Link
+                to={buildSchedulePath(y, undefined, activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined)}
+                className={`year-link${y === year ? ' active' : ''}`}
+              >
+                {y}
+              </Link>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Week nav */}
       {availableWeeks.length > 0 && (
@@ -90,7 +115,7 @@ export default function Schedule() {
             <button
               key={w.week}
               className={`week-pill${w.week === activeWeek ? ' active' : ''}`}
-              onClick={() => navigate({ week: String(w.week) })}
+              onClick={() => goTo(year, w.week, activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined)}
             >
               Wk {w.week}
             </button>
@@ -104,7 +129,7 @@ export default function Schedule() {
           role="tab"
           aria-selected={!divisionId}
           className={`filter-tab${!divisionId ? ' active' : ''}`}
-          onClick={() => navigate({ divisionId: undefined })}
+          onClick={() => goTo(year, activeWeek, undefined)}
         >
           All
         </button>
@@ -114,9 +139,9 @@ export default function Schedule() {
             role="tab"
             aria-selected={divisionId === d.divisionId}
             className={`filter-tab${divisionId === d.divisionId ? ' active' : ''}`}
-            onClick={() => navigate({ divisionId: String(d.divisionId) })}
+            onClick={() => goTo(year, activeWeek, { id: d.divisionId, name: d.name })}
           >
-            {d.name}
+            {shortDivName(d.name)}
           </button>
         ))}
       </div>

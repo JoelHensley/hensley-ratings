@@ -41,8 +41,8 @@ export const api = {
     return get<MetaYears>('/api/meta/years')
   },
 
-  weeks(year: number) {
-    return get<MetaWeeks>(`/api/meta/weeks?year=${year}`)
+  weeks(year: number, allWeeks?: boolean) {
+    return get<MetaWeeks>(`/api/meta/weeks?${qs({ year, allWeeks: allWeeks ? 'true' : undefined })}`)
   },
 
   divisions() {

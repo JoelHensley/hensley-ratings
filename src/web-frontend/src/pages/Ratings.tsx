@@ -1,26 +1,52 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { RatedTeam } from '../api/types'
+import { buildRatingsPath, buildTeamPath } from '../util/paths'
+import { parseRatingsPath } from '../util/parseRatingsPath'
 import { slugify } from '../util/slugify'
+import Team from './Team'
 
-type SortKey = 'rankOverall' | 'hensleyRating' | 'scheduleStrength' | 'wins'
+const DIV_ABBREV: Record<string, string> = {
+  'Division-II': 'D-II',
+  'Division-III': 'D-III',
+}
+const shortDivName = (name: string) => DIV_ABBREV[name] ?? name
+
+type SortKey = 'rankOverall' | 'hensleyRating' | 'scheduleStrength' | 'wins' | 'weekOverWeekChange'
 type SortDir = 'asc' | 'desc'
 
 export default function Ratings() {
-  const [params, setParams] = useSearchParams()
+  const { '*': splat } = useParams()
+  const parsed = parseRatingsPath(splat)
+  const nav = useNavigate()
 
+  // If the path encodes a team page, delegate to Team
+  if (parsed.teamId) {
+    return <Team teamId={parsed.teamId} year={parsed.year} />
+  }
+
+  return <RatingsView parsed={parsed} nav={nav} />
+}
+
+function RatingsView({
+  parsed,
+  nav,
+}: {
+  parsed: ReturnType<typeof parseRatingsPath>
+  nav: ReturnType<typeof useNavigate>
+}) {
   const { data: yearsData } = useQuery({
     queryKey: ['years'],
     queryFn: () => api.years(),
   })
 
   const latestAvailableYear = yearsData?.years[0] ?? new Date().getFullYear()
-  const year = Number(params.get('year') ?? latestAvailableYear)
-  const week = Number(params.get('week') ?? 0)
-  const divisionId = params.get('divisionId') ? Number(params.get('divisionId')) : undefined
-  const conferenceId = params.get('conferenceId') ? Number(params.get('conferenceId')) : undefined
+  const year = parsed.year ?? latestAvailableYear
+  const divisionId = parsed.divId
+  const conferenceId = parsed.confId
+  const weekFromUrl = parsed.week ?? 0
 
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: 'rankOverall',
@@ -44,10 +70,9 @@ export default function Ratings() {
     enabled: divisionId !== undefined,
   })
 
-  // Use the latest available week if none specified
   const availableWeeks = weeksData?.weeks ?? []
   const latestWeek = availableWeeks.at(-1)?.week ?? 0
-  const activeWeek = week > 0 ? week : latestWeek
+  const activeWeek = weekFromUrl > 0 ? weekFromUrl : latestWeek
 
   const { data: ratings, isLoading, error } = useQuery({
     queryKey: ['ratings', year, activeWeek, divisionId, conferenceId],
@@ -55,18 +80,33 @@ export default function Ratings() {
     enabled: activeWeek > 0,
   })
 
-  const navigate = (updates: Record<string, string | undefined>) => {
-    const next = new URLSearchParams(params)
-    for (const [k, v] of Object.entries(updates)) {
-      if (v === undefined) next.delete(k)
-      else next.set(k, v)
+  const divisions = divisionsData ?? []
+  const conferences = conferencesData ?? []
+
+  const activeDivision = divisions.find((d) => d.divisionId === divisionId)
+  const activeConference = conferences.find((c) => c.conferenceId === conferenceId)
+  const divisionName = shortDivName(activeDivision?.name ?? 'All')
+
+  const goTo = (
+    toYear: number,
+    toWeek: number | undefined,
+    toDiv: { id: number; name: string } | undefined,
+    toConf?: { id: number; name: string },
+  ) => nav(buildRatingsPath(toYear, toWeek, toDiv, toConf))
+
+  // Default to FBS when no division is explicitly set (and not "All")
+  useEffect(() => {
+    if (divisionId === undefined && !parsed.isAll && activeWeek > 0 && divisions.length > 0) {
+      const fbs = divisions.find((d) => d.divisionId === 1) ?? divisions[0]
+      nav(buildRatingsPath(year, activeWeek, { id: fbs.divisionId, name: fbs.name }), { replace: true })
     }
-    setParams(next)
-  }
+  }, [divisionId, parsed.isAll, activeWeek, year, divisions.length])
 
   const sortedRatings = (ratings ?? []).slice().sort((a, b) => {
     const mult = sort.dir === 'asc' ? 1 : -1
-    return (a[sort.key] - b[sort.key]) * mult
+    const aVal = a[sort.key] ?? (sort.dir === 'asc' ? Infinity : -Infinity)
+    const bVal = b[sort.key] ?? (sort.dir === 'asc' ? Infinity : -Infinity)
+    return ((aVal as number) - (bVal as number)) * mult
   })
 
   const toggleSort = (key: SortKey) => {
@@ -80,17 +120,53 @@ export default function Ratings() {
   const sortArrow = (key: SortKey) =>
     sort.key === key ? (sort.dir === 'asc' ? ' ↑' : ' ↓') : ''
 
-  const divisions = divisionsData ?? []
-  const conferences = conferencesData ?? []
+  useEffect(() => {
+    const pageTitle = `${divisionName} Ratings | Week ${activeWeek} | ${year} | Hensley Ratings`
+    document.title = pageTitle
+    const setMeta = (sel: string, attrName: string, attrVal: string, content: string) => {
+      let el = document.querySelector(sel) as HTMLMetaElement | null
+      if (!el) {
+        el = document.createElement('meta')
+        el.setAttribute(attrName, attrVal)
+        document.head.appendChild(el)
+      }
+      el.setAttribute('content', content)
+    }
+    const top5 = (ratings ?? []).slice(0, 5)
+      .map((t, i) => `#${i + 1} ${t.name} (${t.wins}-${t.losses})`)
+      .join(', ')
+    const desc = top5
+      ? `Top 5 for this week: ${top5}`
+      : `The Hensley Ratings for ${divisionName} football for week ${activeWeek} in ${year}.`
+    setMeta('meta[name="description"]', 'name', 'description', desc)
+    setMeta('meta[property="og:title"]', 'property', 'og:title', `Week ${activeWeek}`)
+    setMeta('meta[property="og:description"]', 'property', 'og:description', desc)
+    setMeta('meta[property="og:url"]', 'property', 'og:url', window.location.href)
+    setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', `Hensley Ratings for week ${activeWeek}`)
+    setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', desc)
+  }, [divisionName, activeWeek, year, ratings])
 
   return (
     <main className="page">
       <h1 className="page-heading">
-        {divisionId
-          ? (divisions.find((d) => d.divisionId === divisionId)?.name ?? 'Ratings')
-          : 'Ratings'}
-        {activeWeek > 0 && ` — Week ${activeWeek}`}
+        {divisionName}{activeWeek > 0 && ` — Week ${activeWeek}`}
       </h1>
+
+      {/* Year picker */}
+      {yearsData && yearsData.years.length > 1 && (
+        <div className="year-nav">
+          {yearsData.years.slice().reverse().map((y) => (
+            <span key={y}>
+              <Link
+                to={buildRatingsPath(y, undefined, activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined)}
+                className={`year-link${y === year ? ' active' : ''}`}
+              >
+                {y}
+              </Link>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Week navigation */}
       {availableWeeks.length > 0 && (
@@ -99,7 +175,11 @@ export default function Ratings() {
             <button
               key={w.week}
               className={`week-pill${w.week === activeWeek ? ' active' : ''}`}
-              onClick={() => navigate({ week: String(w.week) })}
+              onClick={() => goTo(
+                year, w.week,
+                activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined,
+                activeConference ? { id: activeConference.conferenceId, name: activeConference.name } : undefined,
+              )}
               aria-current={w.week === activeWeek ? 'page' : undefined}
             >
               Wk {w.week}
@@ -114,7 +194,7 @@ export default function Ratings() {
           role="tab"
           aria-selected={!divisionId}
           className={`filter-tab${!divisionId ? ' active' : ''}`}
-          onClick={() => navigate({ divisionId: undefined, conferenceId: undefined })}
+          onClick={() => goTo(year, activeWeek, undefined)}
         >
           All
         </button>
@@ -124,11 +204,9 @@ export default function Ratings() {
             role="tab"
             aria-selected={divisionId === d.divisionId}
             className={`filter-tab${divisionId === d.divisionId ? ' active' : ''}`}
-            onClick={() =>
-              navigate({ divisionId: String(d.divisionId), conferenceId: undefined })
-            }
+            onClick={() => goTo(year, activeWeek, { id: d.divisionId, name: d.name })}
           >
-            {d.name}
+            {shortDivName(d.name)}
           </button>
         ))}
       </div>
@@ -140,7 +218,7 @@ export default function Ratings() {
             role="tab"
             aria-selected={!conferenceId}
             className={`filter-tab${!conferenceId ? ' active' : ''}`}
-            onClick={() => navigate({ conferenceId: undefined })}
+            onClick={() => goTo(year, activeWeek, activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined)}
           >
             All conferences
           </button>
@@ -150,7 +228,11 @@ export default function Ratings() {
               role="tab"
               aria-selected={conferenceId === c.conferenceId}
               className={`filter-tab${conferenceId === c.conferenceId ? ' active' : ''}`}
-              onClick={() => navigate({ conferenceId: String(c.conferenceId) })}
+              onClick={() => goTo(
+                year, activeWeek,
+                activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined,
+                { id: c.conferenceId, name: c.name },
+              )}
             >
               {c.name}
             </button>
@@ -196,7 +278,12 @@ export default function Ratings() {
                 >
                   Sched Strength{sortArrow('scheduleStrength')}
                 </th>
-                <th>+/−</th>
+                <th
+                  className={sort.key === 'weekOverWeekChange' ? 'sorted' : ''}
+                  onClick={() => toggleSort('weekOverWeekChange')}
+                >
+                  +/−{sortArrow('weekOverWeekChange')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -223,16 +310,17 @@ function RatingRow({ team, year }: { team: RatedTeam; year: number }) {
     changeLabel = `${change > 0 ? '+' : ''}${change}`
   }
 
+  const teamPath = team.divisionId && team.conferenceId
+    ? buildTeamPath(year, team.teamId, team.name, { id: team.divisionId, name: team.divisionName }, { id: team.conferenceId, name: team.conferenceName })
+    : `/teams/${team.teamId}?year=${year}&name=${slugify(team.name)}`
+
   return (
     <tr>
       <td>
         <span className="rank-num">#{team.rankOverall}</span>
       </td>
-      <td>
-        <Link
-          to={`/teams/${team.teamId}?year=${year}&name=${slugify(team.name)}`}
-          className="team-link"
-        >
+      <td className="left">
+        <Link to={teamPath} className="team-link">
           {team.name}
         </Link>
         <span className="conf-badge">{team.conferenceName}</span>
