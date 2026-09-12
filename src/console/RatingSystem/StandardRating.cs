@@ -160,7 +160,7 @@ namespace RatingSystem
                 rowCount++;
             }
 
-            foreach (Game game in entities.GetGames(group))
+            foreach (Game game in entities.GetGames(group, ratingSettings.Year))
             {
                 matrix[teamIDMapping[game.HomeTeamID]][teamIDMapping[game.AwayTeamID]] -= 1;
                 matrix[teamIDMapping[game.AwayTeamID]][teamIDMapping[game.HomeTeamID]] -= 1;

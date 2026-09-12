@@ -1,11 +1,3 @@
-/* Program.cs
- * Joel Hensley
- * January 13, 2010
- * This class is used to remove any previous data from the database,
- * import the teams, conferences, divisions, and games into the
- * database, and finally create the different groups for the teams,
- * conferences, and divisions.
- */
 using System;
 using System.Linq;
 using System.IO;
@@ -20,43 +12,40 @@ namespace DataImport
         private CollegeFootballEntities entities = null;
         private static ImportSettings settings = new ImportSettings();
 
-        /// <summary>
-        /// Default constructor
-        /// </summary>
         public Program()
         {
             entities = new CollegeFootballEntities();
         }
 
-        /// <summary>
-        /// Calls run
-        /// </summary>
-        /// <param name="args">No args are required</param>
         static void Main(string[] args)
         {
             Program p = new Program();
             p.Run();
         }
 
-        /// <summary>
-        /// Removes any previous data in the database, import the teams, conferences
-        /// and divisions, imports the games, and the creates the groups for the
-        /// teams, conferences, and divisions.
-        /// </summary>
         public void Run()
         {
             try
             {
-                if (settings.DeleteExistingData)
+                Console.Write("Removing previous data for year {0}...", settings.Year);
+                DeleteYearData();
+                Console.WriteLine("DONE");
+
+                if (settings.ImportWeekSettings)
                 {
-                    Console.Write("Removing previous data...");
-                    DeleteExistingData();
+                    Console.Write("Importing week settings...");
+                    int wsErrors = ImportWeekSettings();
+                    if (wsErrors > 0)
+                    {
+                        Console.WriteLine($"FAILED ({wsErrors} error(s))");
+                        Environment.Exit(1);
+                    }
                     Console.WriteLine("DONE");
                 }
 
                 if (settings.ImportTeams)
                 {
-                    Console.Write("Creating divisions, conferences, and teams...");
+                    Console.Write("Creating divisions, conferences, teams, and affiliations...");
                     int teamErrors = ImportTeams();
                     if (teamErrors > 0)
                     {
@@ -80,15 +69,13 @@ namespace DataImport
 
                 if (settings.CreateGroups)
                 {
-                    // Use a fresh context so all entities are materialized as lazy-loading proxies
-                    // (entities created with 'new' in ImportTeams/ImportGames are plain objects without ILazyLoader).
                     using var freshContext = new CollegeFootballEntities();
                     TeamGraph tg = new TeamGraph(freshContext);
                     ConferenceGraph cg = new ConferenceGraph(freshContext);
                     DivisionGraph dg = new DivisionGraph(freshContext);
 
                     Console.Write("Creating team groups...");
-                    tg.CreateTeamGroups();
+                    tg.CreateTeamGroups(settings.Year);
                     Console.WriteLine("DONE");
 
                     Console.Write("Creating conference groups...");
@@ -107,24 +94,75 @@ namespace DataImport
                 Console.WriteLine($"Error during data import: {ex.Message}");
                 Environment.Exit(1);
             }
-
         }
 
-        /// <summary>
-        /// Removes all data in the database.
-        /// </summary>
-        private void DeleteExistingData()
+        private void DeleteYearData()
         {
-            entities.DeleteAllRows();
+            var games = entities.Games.Where(g => g.Year == settings.Year).ToList();
+            entities.Games.RemoveRange(games);
+
+            var teamResults = entities.TeamResults
+                .Where(tr => tr.Year == settings.Year && tr.Week == settings.Week).ToList();
+            entities.TeamResults.RemoveRange(teamResults);
+            var confResults = entities.ConferenceResults
+                .Where(cr => cr.Year == settings.Year && cr.Week == settings.Week).ToList();
+            entities.ConferenceResults.RemoveRange(confResults);
+            var divResults = entities.DivisionResults
+                .Where(dr => dr.Year == settings.Year && dr.Week == settings.Week).ToList();
+            entities.DivisionResults.RemoveRange(divResults);
+
+            var teamAffs = entities.TeamAffiliations.Where(ta => ta.Year == settings.Year).ToList();
+            entities.TeamAffiliations.RemoveRange(teamAffs);
+            var confAffs = entities.ConferenceAffiliations.Where(ca => ca.Year == settings.Year).ToList();
+            entities.ConferenceAffiliations.RemoveRange(confAffs);
+
+            // Reset connectivity groups so CreateTeamGroups rebuilds from this week's games
+            foreach (var t in entities.Teams) t.Group = null;
+            foreach (var c in entities.Conferences) c.Group = null;
+            foreach (var d in entities.Divisions) d.Group = null;
+
+            entities.SaveChanges();
         }
 
-        /// <summary>
-        /// Imports the teams, conferences, and divisions.
-        /// </summary>
-        /// <remarks>
-        /// The comma-delimited file must have the following
-        /// format: divisionName,conferenceName,teamName
-        /// </remarks>
+        private int ImportWeekSettings()
+        {
+            if (!File.Exists(settings.WeekSettingsFileName))
+            {
+                Console.WriteLine($"\nWeek settings file not found: {settings.WeekSettingsFileName}");
+                return 1;
+            }
+
+            int errors = 0;
+            foreach (var line in File.ReadAllLines(settings.WeekSettingsFileName))
+            {
+                var parts = line.Split(',');
+                if (parts.Length != 2 || !int.TryParse(parts[0].Trim(), out int week))
+                {
+                    Console.WriteLine($"\nInvalid week settings line: {line}");
+                    errors++;
+                    continue;
+                }
+                string cutoffDate = parts[1].Trim();
+                var existing = entities.WeekSettings.FirstOrDefault(
+                    ws => ws.Year == settings.Year && ws.Week == week);
+                if (existing != null)
+                {
+                    existing.CutoffDate = cutoffDate;
+                }
+                else
+                {
+                    entities.WeekSettings.Add(new WeekSettings
+                    {
+                        Year = settings.Year,
+                        Week = week,
+                        CutoffDate = cutoffDate
+                    });
+                }
+            }
+            entities.SaveChanges();
+            return errors;
+        }
+
         private int ImportTeams()
         {
             StreamReader reader = new StreamReader(settings.TeamsFileName);
@@ -132,66 +170,92 @@ namespace DataImport
             Conference conference;
             Team team;
             string[] row;
-            string divisionName;
-            string conferenceName;
-            string teamName;
             int errors = 0;
 
             while (reader.EndOfStream == false)
             {
-                String line = reader.ReadLine();
-
-                // CSV Format: <Division name>,<Conference name>,<Team name>
+                string line = reader.ReadLine();
                 row = line.Split(',');
 
                 if (row.Length != 3)
                 {
-                    Console.WriteLine(String.Format("Error in line: {0}", line));
+                    Console.WriteLine($"\nError in line: {line}");
                     errors++;
                     continue;
                 }
 
-                divisionName = row[0];
-                conferenceName = row[1];
-                teamName = row[2];
+                string divisionName = row[0];
+                string conferenceName = row[1];
+                string teamName = row[2];
 
-                division = entities.Divisions.FirstOrDefault(d => d.Name ==
-                                                divisionName);
-
+                division = entities.Divisions.FirstOrDefault(d => d.Name == divisionName);
                 if (division == null)
                 {
-                    // Division does not exist, so create one
-                    division = new Division();
-                    division.Name = divisionName;
+                    division = new Division { Name = divisionName };
                     entities.Divisions.Add(division);
                     entities.SaveChanges();
                     entities.Entry(division).Reload();
                 }
 
-                conference = entities.Conferences.FirstOrDefault(c => c.Name ==
-                                conferenceName && c.DivisionID == division.ID);
-
+                conference = entities.Conferences.FirstOrDefault(c => c.Name == conferenceName
+                                                                    && c.DivisionID == division.ID);
                 if (conference == null)
                 {
-                    // Conference does not exist, so create one
-                    conference = new Conference();
-                    conference.Name = conferenceName;
-                    conference.Division = division;
+                    conference = new Conference { Name = conferenceName, Division = division };
                     entities.Conferences.Add(conference);
                     entities.SaveChanges();
                     entities.Entry(conference).Reload();
                 }
 
-                team = entities.Teams.FirstOrDefault(t => t.Name == teamName
-                                            && t.ConferenceID == conference.ID);
+                var confAff = entities.ConferenceAffiliations.FirstOrDefault(
+                    ca => ca.ConferenceID == conference.ID && ca.Year == settings.Year);
+                if (confAff == null)
+                {
+                    entities.ConferenceAffiliations.Add(new ConferenceAffiliation
+                    {
+                        ConferenceID = conference.ID,
+                        DivisionID = division.ID,
+                        Year = settings.Year
+                    });
+                    entities.SaveChanges(); // flush so next team in same conf finds it
+                }
+                else
+                {
+                    confAff.DivisionID = division.ID;
+                }
 
+                team = entities.Teams.FirstOrDefault(t => t.Name == teamName
+                                                       && t.ConferenceID == conference.ID);
                 if (team == null)
                 {
-                    // Team does not exist, so create one
-                    team = new Team();
-                    team.Name = teamName;
-                    team.Conference = conference;
+                    team = entities.Teams.FirstOrDefault(t => t.Name == teamName);
+                }
+                if (team == null)
+                {
+                    team = new Team { Name = teamName, Conference = conference };
                     entities.Teams.Add(team);
+                    entities.SaveChanges();
+                    entities.Entry(team).Reload();
+                }
+                else
+                {
+                    team.ConferenceID = conference.ID;
+                }
+
+                var teamAff = entities.TeamAffiliations.FirstOrDefault(
+                    ta => ta.TeamID == team.ID && ta.Year == settings.Year);
+                if (teamAff == null)
+                {
+                    entities.TeamAffiliations.Add(new TeamAffiliation
+                    {
+                        TeamID = team.ID,
+                        ConferenceID = conference.ID,
+                        Year = settings.Year
+                    });
+                }
+                else
+                {
+                    teamAff.ConferenceID = conference.ID;
                 }
             }
 
@@ -199,124 +263,74 @@ namespace DataImport
             return errors;
         }
 
-        /// <summary>
-        /// Imports the games.
-        /// </summary>
-        /// <remarks>
-        /// The comma-delimited file must have the following format:
-        /// GameDate,AwayTeamName,AwayTeamScore,
-        /// HomeTeamName,HomeTeamScore,IsNeutralSite
-        /// The value IsNeutralSite must be either "true" or "false"
-        /// </remarks>
         private int ImportGames()
         {
             StreamReader reader = new StreamReader(settings.GamesFileName);
-            Game game;
-            Team homeTeam;
-            Team awayTeam;
             string[] row;
-            string homeTeamName;
-            string awayTeamName;
-            string homeScoreString;
-            string awayScoreString;
-            string gameDateString;
-            string isNeutralSiteString;
-            DateTime gameDate;
-            int homeScore;
-            int awayScore;
-            bool isNeutralSite;
             int errors = 0;
 
             while (reader.EndOfStream == false)
             {
-                String line = reader.ReadLine();
-
-                // CSV Format: <Game date>,<Away team name>,<Away team score>,
-                // <Home team name>,<Home team score>,<Is Neutral Site>
+                string line = reader.ReadLine();
                 row = line.Split(',');
 
                 if (row.Length != 6)
                 {
-                    Console.WriteLine(String.Format("Error in line: {0}", line));
+                    Console.WriteLine($"\nError in line: {line}");
                     errors++;
                     continue;
                 }
 
-                gameDateString = row[0];
-                awayTeamName = row[1];
-                awayScoreString = row[2];
-                homeTeamName = row[3];
-                homeScoreString = row[4];
-                isNeutralSiteString = row[5];
+                string gameDateString = row[0];
+                string awayTeamName = row[1];
+                string awayScoreString = row[2];
+                string homeTeamName = row[3];
+                string homeScoreString = row[4];
+                string isNeutralSiteString = row[5];
 
-                homeTeam = FindTeam(homeTeamName);
-                awayTeam = FindTeam(awayTeamName);
+                Team homeTeam = FindTeam(homeTeamName);
+                Team awayTeam = FindTeam(awayTeamName);
 
                 if (homeTeam == null)
                 {
-                    Console.WriteLine(String.Format("Invalid home team: {0}",
-                                                    homeTeamName));
+                    Console.WriteLine($"\nInvalid home team: {homeTeamName}");
                     errors++;
                     continue;
                 }
-
                 if (awayTeam == null)
                 {
-                    Console.WriteLine(String.Format("Invalid away team: {0}",
-                                                    awayTeamName));
+                    Console.WriteLine($"\nInvalid away team: {awayTeamName}");
                     errors++;
                     continue;
                 }
 
-                try
-                {
-                    homeScore = Convert.ToInt32(homeScoreString);
-                    awayScore = Convert.ToInt32(awayScoreString);
-                }
-                catch (FormatException)
-                {
-                    Console.WriteLine(String.Format("Invalid score in line: {0}",
-                                                    line));
-                    errors++;
-                    continue;
-                }
+                int homeScore, awayScore;
+                bool isNeutralSite;
+                DateTime gameDate;
 
-                if (isNeutralSiteString.Equals("true"))
-                {
-                    isNeutralSite = true;
-                }
-                else if (isNeutralSiteString.Equals("false"))
-                {
-                    isNeutralSite = false;
-                }
-                else
-                {
-                    Console.WriteLine(String.Format("Invalid isNeutralSite in line: " +
-                                                    "{0}", line));
-                    errors++;
-                    continue;
-                }
+                try { homeScore = Convert.ToInt32(homeScoreString); }
+                catch (FormatException) { Console.WriteLine($"\nInvalid score in line: {line}"); errors++; continue; }
 
-                try
-                {
-                    gameDate = Convert.ToDateTime(gameDateString);
-                }
-                catch (Exception)
-                {
-                    Console.WriteLine(String.Format("Invalid date in line: {0}",
-                                                    line));
-                    errors++;
-                    continue;
-                }
+                try { awayScore = Convert.ToInt32(awayScoreString); }
+                catch (FormatException) { Console.WriteLine($"\nInvalid score in line: {line}"); errors++; continue; }
 
-                game = new Game();
-                game.HomeTeam = homeTeam;
-                game.HomeScore = homeScore;
-                game.AwayTeam = awayTeam;
-                game.AwayScore = awayScore;
-                game.IsNeutralSite = isNeutralSite;
-                game.Date = gameDate;
+                if (isNeutralSiteString.Equals("true")) isNeutralSite = true;
+                else if (isNeutralSiteString.Equals("false")) isNeutralSite = false;
+                else { Console.WriteLine($"\nInvalid isNeutralSite in line: {line}"); errors++; continue; }
 
+                try { gameDate = Convert.ToDateTime(gameDateString); }
+                catch (Exception) { Console.WriteLine($"\nInvalid date in line: {line}"); errors++; continue; }
+
+                var game = new Game
+                {
+                    HomeTeam = homeTeam,
+                    HomeScore = homeScore,
+                    AwayTeam = awayTeam,
+                    AwayScore = awayScore,
+                    IsNeutralSite = isNeutralSite,
+                    Date = gameDate,
+                    Year = settings.Year
+                };
                 entities.Games.Add(game);
             }
 
@@ -328,14 +342,11 @@ namespace DataImport
         {
             var team = entities.Teams.FirstOrDefault(t => t.Name == name);
             if (team != null) return team;
-
             var nameLower = name.ToLower();
             team = entities.Teams.AsEnumerable().FirstOrDefault(t => t.Name.ToLower() == nameLower);
             if (team != null) return team;
-
             var normalized = Normalize(nameLower);
-            team = entities.Teams.AsEnumerable().FirstOrDefault(t => Normalize(t.Name.ToLower()) == normalized);
-            return team;
+            return entities.Teams.AsEnumerable().FirstOrDefault(t => Normalize(t.Name.ToLower()) == normalized);
         }
 
         private static string Normalize(string s) =>

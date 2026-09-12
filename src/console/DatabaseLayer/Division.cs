@@ -8,6 +8,5 @@ namespace DatabaseLayer
         public string Name { get; set; }
         public int? Group { get; set; }
         public virtual ICollection<Conference> Conferences { get; set; }
-        public virtual DivisionResult DivisionResult { get; set; }
     }
 }

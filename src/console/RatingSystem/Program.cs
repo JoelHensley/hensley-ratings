@@ -67,7 +67,7 @@ namespace RatingSystem
                 {
                     count = entities.Teams.Where(t => t.Group == group).Count();
 
-                    if (count > 1)
+                    if (count >= settings.MinGroupSize)
                     {
                         // There must be at least 2 teams in the group to calculate
                         // ratings
@@ -86,7 +86,7 @@ namespace RatingSystem
                     count = entities.Conferences.Where(c => c.Group ==
                                                         group).Count();
 
-                    if (count > 1)
+                    if (count >= settings.MinGroupSize)
                     {
                         // There must be at least 2 conferences in the group to
                         // calculate ratings
@@ -104,7 +104,7 @@ namespace RatingSystem
                 {
                     count = entities.Divisions.Where(d => d.Group == group).Count();
 
-                    if (count > 1)
+                    if (count >= settings.MinGroupSize)
                     {
                         // There must be at least 2 divisions in the group to
                         // calculate ratings
@@ -208,7 +208,7 @@ namespace RatingSystem
             IEnumerable<Game> interConferenceGames;
             stdSSVector = null; hfaSSVector = null; mpdSSVector = null; hensleySSVector = null;
 
-            interConferenceGames = entities.GetInterConferenceGames(group);
+            interConferenceGames = entities.GetInterConferenceGames(group, settings.Year);
 
             if (settings.ComputeStandardRatings
                 || settings.ComputeHomefieldAdvantageRatings
@@ -297,7 +297,7 @@ namespace RatingSystem
             IEnumerable<Game> interDivisionGames;
             stdSSVector = null; hfaSSVector = null; mpdSSVector = null; hensleySSVector = null;
 
-            interDivisionGames = entities.GetInterDivisionGames(group);
+            interDivisionGames = entities.GetInterDivisionGames(group, settings.Year);
 
             if (settings.ComputeStandardRatings
                 || settings.ComputeHomefieldAdvantageRatings
@@ -550,19 +550,22 @@ namespace RatingSystem
             String detailLine = String.Format("{0} ({1}-{2})", team.Name, team.Wins,
                                             team.Losses);
 
-            if (team.TeamResult == null)
+            teamResult = entities.TeamResults.FirstOrDefault(tr => tr.TeamID == key
+                                                                && tr.Year == settings.Year
+                                                                && tr.Week == settings.Week);
+            if (teamResult == null)
             {
-                teamResult = new TeamResult();
-                teamResult.Team = team;
+                teamResult = new TeamResult { TeamID = key, Year = settings.Year, Week = settings.Week };
                 entities.TeamResults.Add(teamResult);
             }
-            else
-            {
-                teamResult = team.TeamResult;
-            }
 
-            teamResult.Wins = team.Wins;
-            teamResult.Losses = team.Losses;
+            // Use year-filtered game lists so W-L counts reflect only this season
+            var homeGames = entities.Games.Where(g => g.HomeTeamID == key && g.Year == settings.Year).ToList();
+            var awayGames = entities.Games.Where(g => g.AwayTeamID == key && g.Year == settings.Year).ToList();
+            teamResult.Wins   = homeGames.Count(g => g.HomeScore > g.AwayScore)
+                              + awayGames.Count(g => g.AwayScore > g.HomeScore);
+            teamResult.Losses = homeGames.Count(g => g.HomeScore < g.AwayScore)
+                              + awayGames.Count(g => g.AwayScore < g.HomeScore);
 
             if (settings.ComputeStandardRatings)
             {
@@ -612,6 +615,12 @@ namespace RatingSystem
                 teamResult.HensleyRating = hensleyRatingVector[key];
             }
 
+            if (hensleySSVector != null && hensleySSVector.ContainsKey(key))
+                teamResult.ScheduleStrength = hensleySSVector[key];
+
+            teamResult.PointsScored  = homeGames.Sum(g => g.HomeScore) + awayGames.Sum(g => g.AwayScore);
+            teamResult.PointsAllowed = homeGames.Sum(g => g.AwayScore) + awayGames.Sum(g => g.HomeScore);
+
             return detailLine;
         }
 
@@ -631,15 +640,13 @@ namespace RatingSystem
             String detailLine = String.Format("{0} ({1}-{2})", conference.Name,
                                             wins, losses);
 
-            if (conference.ConferenceResult == null)
+            conferenceResult = entities.ConferenceResults.FirstOrDefault(cr => cr.ConferenceID == key
+                                                                              && cr.Year == settings.Year
+                                                                              && cr.Week == settings.Week);
+            if (conferenceResult == null)
             {
-                conferenceResult = new ConferenceResult();
-                conferenceResult.Conference = conference;
+                conferenceResult = new ConferenceResult { ConferenceID = key, Year = settings.Year, Week = settings.Week };
                 entities.ConferenceResults.Add(conferenceResult);
-            }
-            else
-            {
-                conferenceResult = conference.ConferenceResult;
             }
 
             conferenceResult.Wins = wins;
@@ -693,6 +700,9 @@ namespace RatingSystem
                 conferenceResult.HensleyRating = hensleyRatingVector[key];
             }
 
+            if (hensleySSVector != null && hensleySSVector.ContainsKey(key))
+                conferenceResult.ScheduleStrength = hensleySSVector[key];
+
             return detailLine;
         }
 
@@ -712,15 +722,13 @@ namespace RatingSystem
             String detailLine = String.Format("{0} ({1}-{2})", division.Name, wins,
                                             losses);
 
-            if (division.DivisionResult == null)
+            divisionResult = entities.DivisionResults.FirstOrDefault(dr => dr.DivisionID == key
+                                                                          && dr.Year == settings.Year
+                                                                          && dr.Week == settings.Week);
+            if (divisionResult == null)
             {
-                divisionResult = new DivisionResult();
-                divisionResult.Division = division;
+                divisionResult = new DivisionResult { DivisionID = key, Year = settings.Year, Week = settings.Week };
                 entities.DivisionResults.Add(divisionResult);
-            }
-            else
-            {
-                divisionResult = division.DivisionResult;
             }
 
             divisionResult.Wins = wins;
@@ -773,6 +781,9 @@ namespace RatingSystem
                                         ssRank);
                 divisionResult.HensleyRating = hensleyRatingVector[key];
             }
+
+            if (hensleySSVector != null && hensleySSVector.ContainsKey(key))
+                divisionResult.ScheduleStrength = hensleySSVector[key];
 
             return detailLine;
         }

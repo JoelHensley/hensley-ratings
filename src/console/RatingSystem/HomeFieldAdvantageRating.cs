@@ -110,7 +110,7 @@ namespace RatingSystem
             double[][] matrix = new double[teamCount + 1][];
             IEnumerable<Game> groupGames;
 
-            groupGames = entities.GetGames(group);
+            groupGames = entities.GetGames(group, ratingSettings.Year);
 
             // Pre-allocate the HFA equation row (row teamCount)
             matrix[teamCount] = new double[teamCount + 2];

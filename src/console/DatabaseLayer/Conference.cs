@@ -10,6 +10,6 @@ namespace DatabaseLayer
         public int? Group { get; set; }
         public virtual Division Division { get; set; }
         public virtual ICollection<Team> Teams { get; set; }
-        public virtual ConferenceResult ConferenceResult { get; set; }
+        public virtual ICollection<ConferenceAffiliation> ConferenceAffiliations { get; set; }
     }
 }

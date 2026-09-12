@@ -1,8 +1,5 @@
-/* RatingSettings.cs
- * Joel Hensley
- * January 16, 2010
- * This class contains the settings for the rating system.
- */
+using System;
+
 namespace RatingSystem
 {
     public class RatingSettings
@@ -20,5 +17,19 @@ namespace RatingSystem
         public string TeamResultsOutputFile = "Output/TeamResults";
         public string ConferenceResultsOutputFile = "Output/ConferenceResults";
         public string DivisionResultsOutputFile = "Output/DivisionResults";
+        public int Year;
+        public int Week;
+        // Groups smaller than this are skipped — avoids extreme ratings from tiny isolated schools
+        public int MinGroupSize = 20;
+
+        public RatingSettings()
+        {
+            if (!int.TryParse(Environment.GetEnvironmentVariable("SEASON_YEAR"), out Year))
+                Year = DateTime.Now.Year;
+            if (!int.TryParse(Environment.GetEnvironmentVariable("WEEK"), out Week))
+                Week = 1;
+            if (int.TryParse(Environment.GetEnvironmentVariable("MIN_GROUP_SIZE"), out int minG))
+                MinGroupSize = minG;
+        }
     }
 }

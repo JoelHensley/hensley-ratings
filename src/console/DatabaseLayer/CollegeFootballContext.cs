@@ -1,3 +1,4 @@
+using System;
 using Microsoft.EntityFrameworkCore;
 
 namespace DatabaseLayer
@@ -11,17 +12,28 @@ namespace DatabaseLayer
         public DbSet<TeamResult> TeamResults { get; set; }
         public DbSet<ConferenceResult> ConferenceResults { get; set; }
         public DbSet<DivisionResult> DivisionResults { get; set; }
+        public DbSet<WeekSettings> WeekSettings { get; set; }
+        public DbSet<TeamAffiliation> TeamAffiliations { get; set; }
+        public DbSet<ConferenceAffiliation> ConferenceAffiliations { get; set; }
 
         public CollegeFootballEntities()
         {
             Database.EnsureCreated();
         }
 
+        public CollegeFootballEntities(DbContextOptions<CollegeFootballEntities> options)
+            : base(options)
+        {
+            Database.EnsureCreated();
+        }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
+            if (optionsBuilder.IsConfigured) return;
+            var dbPath = Environment.GetEnvironmentVariable("DB_PATH") ?? "collegefootball.db";
             optionsBuilder
                 .UseLazyLoadingProxies()
-                .UseSqlite("Data Source=collegefootball.db");
+                .UseSqlite($"Data Source={dbPath}");
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -30,20 +42,35 @@ namespace DatabaseLayer
                 .Ignore(t => t.Games)
                 .Ignore(t => t.Opponents);
 
+            // TeamResult: many per team (year+week keyed)
             modelBuilder.Entity<TeamResult>()
                 .HasOne(tr => tr.Team)
-                .WithOne(t => t.TeamResult)
-                .HasForeignKey<TeamResult>(tr => tr.TeamID);
+                .WithMany()
+                .HasForeignKey(tr => tr.TeamID);
 
+            modelBuilder.Entity<TeamResult>()
+                .HasIndex(tr => new { tr.TeamID, tr.Year, tr.Week })
+                .IsUnique();
+
+            // ConferenceResult: many per conference (year+week keyed)
             modelBuilder.Entity<ConferenceResult>()
                 .HasOne(cr => cr.Conference)
-                .WithOne(c => c.ConferenceResult)
-                .HasForeignKey<ConferenceResult>(cr => cr.ConferenceID);
+                .WithMany()
+                .HasForeignKey(cr => cr.ConferenceID);
 
+            modelBuilder.Entity<ConferenceResult>()
+                .HasIndex(cr => new { cr.ConferenceID, cr.Year, cr.Week })
+                .IsUnique();
+
+            // DivisionResult: many per division (year+week keyed)
             modelBuilder.Entity<DivisionResult>()
                 .HasOne(dr => dr.Division)
-                .WithOne(d => d.DivisionResult)
-                .HasForeignKey<DivisionResult>(dr => dr.DivisionID);
+                .WithMany()
+                .HasForeignKey(dr => dr.DivisionID);
+
+            modelBuilder.Entity<DivisionResult>()
+                .HasIndex(dr => new { dr.DivisionID, dr.Year, dr.Week })
+                .IsUnique();
 
             modelBuilder.Entity<Game>()
                 .HasOne(g => g.HomeTeam)
@@ -56,6 +83,41 @@ namespace DatabaseLayer
                 .WithMany(t => t.AwayGames)
                 .HasForeignKey(g => g.AwayTeamID)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // TeamAffiliation: year-keyed team→conference mapping
+            modelBuilder.Entity<TeamAffiliation>()
+                .HasIndex(ta => new { ta.TeamID, ta.Year })
+                .IsUnique();
+
+            modelBuilder.Entity<TeamAffiliation>()
+                .HasOne(ta => ta.Team)
+                .WithMany(t => t.TeamAffiliations)
+                .HasForeignKey(ta => ta.TeamID);
+
+            modelBuilder.Entity<TeamAffiliation>()
+                .HasOne(ta => ta.Conference)
+                .WithMany()
+                .HasForeignKey(ta => ta.ConferenceID);
+
+            // ConferenceAffiliation: year-keyed conference→division mapping
+            modelBuilder.Entity<ConferenceAffiliation>()
+                .HasIndex(ca => new { ca.ConferenceID, ca.Year })
+                .IsUnique();
+
+            modelBuilder.Entity<ConferenceAffiliation>()
+                .HasOne(ca => ca.Conference)
+                .WithMany(c => c.ConferenceAffiliations)
+                .HasForeignKey(ca => ca.ConferenceID);
+
+            modelBuilder.Entity<ConferenceAffiliation>()
+                .HasOne(ca => ca.Division)
+                .WithMany()
+                .HasForeignKey(ca => ca.DivisionID);
+
+            // WeekSettings: unique per year+week
+            modelBuilder.Entity<WeekSettings>()
+                .HasIndex(ws => new { ws.Year, ws.Week })
+                .IsUnique();
         }
     }
 }

@@ -1,14 +1,4 @@
-/* TeamGraph.cs
- * Joel Hensley
- * January 27, 2010
- * This class is used to identify and store the different team
- * groups in the database. A team is connected to another team
- * if there is a series of games that connects to the teams together.
- */
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using DatabaseLayer;
 
 namespace DataImport
@@ -17,20 +7,12 @@ namespace DataImport
     {
         private CollegeFootballEntities entities = null;
 
-        /// <summary>
-        /// Default constructor
-        /// </summary>
-        /// <param name="_entities">The database object</param>
         public TeamGraph(CollegeFootballEntities _entities)
         {
             entities = _entities;
         }
 
-        /// <summary>
-        /// Loops through all the teams in the database until all
-        /// teams are included in some group.
-        /// </summary>
-        public void CreateTeamGroups()
+        public void CreateTeamGroups(int year)
         {
             Team team;
             int group = 1;
@@ -38,26 +20,30 @@ namespace DataImport
             team = entities.Teams.FirstOrDefault(t => t.Group == null);
             while (team != null)
             {
-                ConnectTeams(team, group);
+                ConnectTeams(team, group, year);
                 team = entities.Teams.FirstOrDefault(t => t.Group == null);
                 group++;
             }
         }
 
-        /// <summary>
-        /// Recursively loops through a team's opponents until
-        /// all teams in the group are found.
-        /// </summary>
-        /// <param name="team">The team being examined</param>
-        /// <param name="group">The group the team belongs to</param>
-        private void ConnectTeams(Team team, int group)
+        private void ConnectTeams(Team team, int group, int year)
         {
             team.Group = group;
             entities.SaveChanges();
 
-            foreach (Team opponent in team.Opponents.Where(t => t.Group == null))
+            // Only traverse edges from games in the current season
+            var oppIds = entities.Games
+                .Where(g => g.Year == year
+                    && (g.HomeTeamID == team.ID || g.AwayTeamID == team.ID))
+                .Select(g => g.HomeTeamID == team.ID ? g.AwayTeamID : g.HomeTeamID)
+                .Distinct()
+                .ToList();
+
+            foreach (int oppId in oppIds)
             {
-                ConnectTeams(opponent, group);
+                var opp = entities.Teams.FirstOrDefault(t => t.ID == oppId && t.Group == null);
+                if (opp != null)
+                    ConnectTeams(opp, group, year);
             }
         }
     }

@@ -17,6 +17,7 @@ namespace DatabaseLayer
         public int AwayScore { get; set; }
         public bool IsNeutralSite { get; set; }
         public DateTime Date { get; set; }
+        public int Year { get; set; }
         public virtual Team HomeTeam { get; set; }
         public virtual Team AwayTeam { get; set; }
 

@@ -80,7 +80,7 @@ namespace RatingSystem
             int rowCount = 0;
             int gameCount = 0;
             double[][] matrix = new double[teamCount + 1][];
-            IEnumerable<Game> groupGames = entities.GetGames(group);
+            IEnumerable<Game> groupGames = entities.GetGames(group, ratingSettings.Year);
 
             matrix[teamCount] = new double[teamCount + 2];
             foreach (Team team in entities.Teams.Where(t => t.Group ==

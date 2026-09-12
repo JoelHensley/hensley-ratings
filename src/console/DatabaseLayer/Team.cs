@@ -16,10 +16,12 @@ namespace DatabaseLayer
         public string Name { get; set; }
         public int ConferenceID { get; set; }
         public int? Group { get; set; }
+        public string TwitterHandle { get; set; }
+        public string TwitterWidgetId { get; set; }
         public virtual Conference Conference { get; set; }
         public virtual ICollection<Game> HomeGames { get; set; }
         public virtual ICollection<Game> AwayGames { get; set; }
-        public virtual TeamResult TeamResult { get; set; }
+        public virtual ICollection<TeamAffiliation> TeamAffiliations { get; set; }
 
         private bool isHomeGameDifferentialSet = false;
         private int homeGameDifferential = 0;

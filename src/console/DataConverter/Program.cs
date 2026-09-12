@@ -13,6 +13,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -80,6 +81,16 @@ namespace DataConverter
                 string homeScore = normalized[69..71].Trim();
                 string neutral   = normalized.Length > 72 ? normalized[72..].Trim() : string.Empty;
                 string isNeutral = string.IsNullOrEmpty(neutral) ? "false" : "true";
+
+                // Skip games after the cutoff date when generating a week snapshot
+                if (settings.CutoffDate.HasValue
+                    && DateTime.TryParseExact(date.Trim(), "dd-MMM-yy",
+                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var gameDate)
+                    && gameDate.Date > settings.CutoffDate.Value)
+                {
+                    skipped++;
+                    continue;
+                }
 
                 if (!int.TryParse(awayScore, out _) || !int.TryParse(homeScore, out _))
                 {

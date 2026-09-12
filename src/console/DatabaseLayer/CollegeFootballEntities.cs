@@ -19,17 +19,25 @@ namespace DatabaseLayer
         /// <returns>The interconference games</returns>
         public IEnumerable<Game> GetInterConferenceGames(int conferenceGroup)
         {
-            IEnumerable<Game> interConferenceGames = null;
+            return from g in Games
+                   join ht in Teams on g.HomeTeamID equals ht.ID
+                   join at in Teams on g.AwayTeamID equals at.ID
+                   join hc in Conferences on ht.ConferenceID equals hc.ID
+                   where ht.ConferenceID != at.ConferenceID
+                       && hc.Group == conferenceGroup
+                   select g;
+        }
 
-            interConferenceGames = from g in Games
-                            join ht in Teams on g.HomeTeamID equals ht.ID
-                            join at in Teams on g.AwayTeamID equals at.ID
-                            join hc in Conferences on ht.ConferenceID equals hc.ID
-                            where ht.ConferenceID != at.ConferenceID
-                            && hc.Group == conferenceGroup
-                            select g;
-
-            return interConferenceGames;
+        public IEnumerable<Game> GetInterConferenceGames(int conferenceGroup, int year)
+        {
+            return from g in Games
+                   join ht in Teams on g.HomeTeamID equals ht.ID
+                   join at in Teams on g.AwayTeamID equals at.ID
+                   join hc in Conferences on ht.ConferenceID equals hc.ID
+                   where ht.ConferenceID != at.ConferenceID
+                       && hc.Group == conferenceGroup
+                       && g.Year == year
+                   select g;
         }
 
         /// <summary>
@@ -39,19 +47,29 @@ namespace DatabaseLayer
         /// <returns>The interdivision games</returns>
         public IEnumerable<Game> GetInterDivisionGames(int divisionGroup)
         {
-            IEnumerable<Game> interDivisionGames = null;
+            return from g in Games
+                   join ht in Teams on g.HomeTeamID equals ht.ID
+                   join at in Teams on g.AwayTeamID equals at.ID
+                   join hc in Conferences on ht.ConferenceID equals hc.ID
+                   join ac in Conferences on at.ConferenceID equals ac.ID
+                   join hd in Divisions on hc.DivisionID equals hd.ID
+                   where hc.DivisionID != ac.DivisionID
+                       && hd.Group == divisionGroup
+                   select g;
+        }
 
-            interDivisionGames = from g in Games
-                            join ht in Teams on g.HomeTeamID equals ht.ID
-                            join at in Teams on g.AwayTeamID equals at.ID
-                            join hc in Conferences on ht.ConferenceID equals hc.ID
-                            join ac in Conferences on at.ConferenceID equals ac.ID
-                            join hd in Divisions on hc.DivisionID equals hd.ID
-                            where hc.DivisionID != ac.DivisionID
-                            && hd.Group == divisionGroup
-                            select g;
-
-            return interDivisionGames;
+        public IEnumerable<Game> GetInterDivisionGames(int divisionGroup, int year)
+        {
+            return from g in Games
+                   join ht in Teams on g.HomeTeamID equals ht.ID
+                   join at in Teams on g.AwayTeamID equals at.ID
+                   join hc in Conferences on ht.ConferenceID equals hc.ID
+                   join ac in Conferences on at.ConferenceID equals ac.ID
+                   join hd in Divisions on hc.DivisionID equals hd.ID
+                   where hc.DivisionID != ac.DivisionID
+                       && hd.Group == divisionGroup
+                       && g.Year == year
+                   select g;
         }
 
         /// <summary>
@@ -543,14 +561,18 @@ namespace DatabaseLayer
         /// <returns>All games played by that team group</returns>
         public IEnumerable<Game> GetGames(int groupNum)
         {
-            IEnumerable<Game> groupGames = null;
+            return from g in Games
+                   join ht in Teams on g.HomeTeamID equals ht.ID
+                   where ht.Group == groupNum
+                   select g;
+        }
 
-            groupGames = from g in Games
-                         join ht in Teams on g.HomeTeamID equals ht.ID
-                         where ht.Group == groupNum
-                         select g;
-
-            return groupGames;
+        public IEnumerable<Game> GetGames(int groupNum, int year)
+        {
+            return from g in Games
+                   join ht in Teams on g.HomeTeamID equals ht.ID
+                   where ht.Group == groupNum && g.Year == year
+                   select g;
         }
 
         /// <summary>
@@ -642,6 +664,9 @@ namespace DatabaseLayer
             ConferenceResults.RemoveRange(ConferenceResults.ToList());
             DivisionResults.RemoveRange(DivisionResults.ToList());
             Games.RemoveRange(Games.ToList());
+            TeamAffiliations.RemoveRange(TeamAffiliations.ToList());
+            ConferenceAffiliations.RemoveRange(ConferenceAffiliations.ToList());
+            WeekSettings.RemoveRange(WeekSettings.ToList());
             Teams.RemoveRange(Teams.ToList());
             Conferences.RemoveRange(Conferences.ToList());
             Divisions.RemoveRange(Divisions.ToList());
