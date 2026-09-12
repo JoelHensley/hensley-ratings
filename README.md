@@ -156,6 +156,29 @@ The evaluator outputs a `results.csv` with mistake count, total error (Potemkin'
 
 ---
 
+## Web Layer
+
+A React frontend and ASP.NET Core API for browsing ratings in the browser.
+
+| Component | Path | README |
+|-----------|------|--------|
+| API (ASP.NET Core) | `src/web-backend/` | [web-backend/README.md](src/web-backend/README.md) |
+| UI (React + Vite) | `src/web-frontend/` | [web-frontend/README.md](src/web-frontend/README.md) |
+
+Quick start (after running the console pipeline at least once):
+
+```bash
+# terminal 1 — API
+cd src/web-backend && dotnet run --project HensleyRatings.Api --launch-profile http
+
+# terminal 2 — UI
+cd src/web-frontend && npm install && npm run dev
+```
+
+Then open **http://localhost:5173**.
+
+---
+
 ## Project Structure
 
 All source lives under `src/console/`.
