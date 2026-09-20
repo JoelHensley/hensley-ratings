@@ -49,7 +49,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
 
   return (
     <main className="page">
-      <div style={{ marginBottom: 8, fontSize: 13 }}>
+      <div style={{ marginBottom: 8, fontSize: 16 }}>
         <Link to={buildRatingsPath(year, undefined, undefined)} style={{ color: 'var(--muted)' }}>All</Link>
         {divOpt && (
           <>
@@ -115,7 +115,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
       <section className="team-game-log">
         <div
           className="game-log-row"
-          style={{ fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', borderBottom: '2px solid var(--border)' }}
+          style={{ fontFamily: 'var(--font-display)', fontSize: 17, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', borderBottom: '2px solid var(--border)' }}
         >
           <span>Date</span>
           <span>Opponent</span>
@@ -150,7 +150,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                     {isWin ? 'W' : 'L'} {g.teamScore}–{g.opponentScore}
                   </span>
                 ) : (
-                  <span style={{ color: 'var(--muted)', fontSize: 12 }}>Upcoming</span>
+                  <span style={{ color: 'var(--muted)', fontSize: 18 }}>Upcoming</span>
                 )}
               </span>
               <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
@@ -163,7 +163,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                       {g.teamRating.toFixed(3)}
                     </span>
                     {g.teamRank && (
-                      <span style={{ color: 'var(--muted)', fontSize: 12, marginLeft: 4 }}>
+                      <span style={{ color: 'var(--muted)', fontSize: 18, marginLeft: 4 }}>
                         (#{g.teamRank})
                       </span>
                     )}
