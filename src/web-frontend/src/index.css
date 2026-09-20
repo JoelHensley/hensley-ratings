@@ -224,6 +224,23 @@ body {
   border-bottom-color: var(--accent);
 }
 
+/* Conference sub-filter — visually subordinate to division tabs */
+.conf-bar {
+  margin-left: 8px;
+  border-bottom-color: transparent;
+  margin-bottom: 16px;
+  gap: 2px;
+}
+.conf-bar .filter-tab {
+  font-size: 10.5px;
+  padding: 4px 9px;
+  letter-spacing: 0.04em;
+  border-bottom-width: 1.5px;
+  opacity: 0.85;
+}
+.conf-bar .filter-tab:hover { opacity: 1; }
+.conf-bar .filter-tab.active { opacity: 1; }
+
 /* ─── Ratings table ──────────────────────────────────────────────────── */
 .table-wrap {
   overflow-x: auto;
@@ -439,7 +456,7 @@ body {
 }
 .game-log-row {
   display: grid;
-  grid-template-columns: 80px 1fr auto auto auto;
+  grid-template-columns: 80px 1fr 96px 60px 110px;
   gap: 8px;
   align-items: center;
   padding: 8px 10px;

@@ -213,7 +213,7 @@ function RatingsView({
 
       {/* Conference filter (only when a division is selected) */}
       {divisionId !== undefined && conferences.length > 0 && (
-        <div className="filter-bar" style={{ marginTop: '-14px' }} role="tablist">
+        <div className="filter-bar conf-bar" role="tablist">
           <button
             role="tab"
             aria-selected={!conferenceId}
@@ -288,7 +288,7 @@ function RatingsView({
             </thead>
             <tbody>
               {sortedRatings.map((team) => (
-                <RatingRow key={team.teamId} team={team} year={year} />
+                <RatingRow key={team.teamId} team={team} year={year} activeConferenceId={conferenceId} />
               ))}
             </tbody>
           </table>
@@ -301,7 +301,7 @@ function RatingsView({
   )
 }
 
-function RatingRow({ team, year }: { team: RatedTeam; year: number }) {
+function RatingRow({ team, year, activeConferenceId }: { team: RatedTeam; year: number; activeConferenceId?: number }) {
   const change = team.weekOverWeekChange
   let changeClass = 'same'
   let changeLabel = '—'
@@ -317,7 +317,16 @@ function RatingRow({ team, year }: { team: RatedTeam; year: number }) {
   return (
     <tr>
       <td>
-        <span className="rank-num">#{team.rankOverall}</span>
+        {activeConferenceId ? (
+          <span className="rank-num">
+            #{team.rankConference}
+            <span style={{ fontSize: '0.75em', fontWeight: 400, color: 'var(--muted)', marginLeft: 3 }}>
+              (#{team.rankDivision})
+            </span>
+          </span>
+        ) : (
+          <span className="rank-num">#{team.rankOverall}</span>
+        )}
       </td>
       <td className="left">
         <Link to={teamPath} className="team-link">
