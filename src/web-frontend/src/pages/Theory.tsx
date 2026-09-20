@@ -40,7 +40,7 @@ export default function Theory() {
         </p>
         <p>Listed below are the current BCS computer ratings:</p>
         <ul>
-          <li><a href="http://masseyratings.com/rate.php?lg=cf">Massey Ratings</a></li>
+          <li><a href="https://masseyratings.com/cf/fbs/ratings">Massey Ratings</a></li>
           <li><a href="http://prwolfe.bol.ucla.edu/cfootball/">Wolfe Ratings</a></li>
           <li><a href="http://www.usatoday.com/sports/sagarin.htm">Sagarin Ratings</a></li>
           <li><a href="http://www.cfrc.com/">Billingsley Ratings</a></li>

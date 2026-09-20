@@ -4,6 +4,12 @@ import { api } from '../api/client'
 import { buildRatingsPath } from '../util/paths'
 import { slugify } from '../util/slugify'
 
+const DIV_ABBREV: Record<string, string> = {
+  'Division-II': 'D-II',
+  'Division-III': 'D-III',
+}
+const shortDivName = (name: string) => DIV_ABBREV[name] ?? name
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
@@ -38,15 +44,29 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
     ? (team.pointsAllowed / Math.max(team.wins + team.losses, 1)).toFixed(1)
     : null
 
+  const divOpt = team.divisionId ? { id: team.divisionId, name: team.divisionName } : undefined
+  const confOpt = team.conferenceId ? { id: team.conferenceId, name: team.conferenceName } : undefined
+
   return (
     <main className="page">
       <div style={{ marginBottom: 8, fontSize: 13 }}>
-        <Link
-          to={buildRatingsPath(year, undefined, team.divisionId ? { id: team.divisionId, name: team.divisionName } : undefined)}
-          style={{ color: 'var(--muted)' }}
-        >
-          Ratings
-        </Link>
+        <Link to={buildRatingsPath(year, undefined, undefined)} style={{ color: 'var(--muted)' }}>All</Link>
+        {divOpt && (
+          <>
+            {' / '}
+            <Link to={buildRatingsPath(year, undefined, divOpt)} style={{ color: 'var(--muted)' }}>
+              {shortDivName(team.divisionName)}
+            </Link>
+          </>
+        )}
+        {confOpt && divOpt && (
+          <>
+            {' / '}
+            <Link to={buildRatingsPath(year, undefined, divOpt, confOpt)} style={{ color: 'var(--muted)' }}>
+              {team.conferenceName}
+            </Link>
+          </>
+        )}
         {' / '}
         <span style={{ color: 'var(--text)' }}>{team.name}</span>
       </div>
@@ -54,11 +74,6 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
       <div className="team-header">
         <div>
           <h1 className="team-name">{team.name}</h1>
-          <div className="team-meta">
-            <span>{team.conferenceName}</span>
-            <span>{team.divisionName}</span>
-            <span>{year} Season</span>
-          </div>
         </div>
 
         <div className="team-stat-row">

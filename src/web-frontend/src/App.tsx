@@ -4,9 +4,11 @@ import Schedule from './pages/Schedule'
 import Team from './pages/Team'
 import Theory from './pages/Theory'
 
+const CURRENT_YEAR = new Date().getFullYear()
+
 export default function App() {
   return (
-    <>
+    <div className="app-layout">
       <nav className="nav">
         <div className="nav-inner">
           <NavLink to="/" className="nav-brand">
@@ -39,6 +41,18 @@ export default function App() {
 
         <Route path="/theory" element={<Theory />} />
       </Routes>
-    </>
+      <footer className="site-footer">
+        <a
+          href="https://x.com/JoelHensley"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="footer-x-link"
+        >
+          @JoelHensley
+        </a>
+        <span className="footer-sep">·</span>
+        <span>© 2010–{CURRENT_YEAR} by Joel Hensley</span>
+      </footer>
+    </div>
   )
 }
