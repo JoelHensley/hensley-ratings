@@ -463,6 +463,21 @@ body {
   margin: 16px 0;
   font-size: 15px;
 }
+.theory-content img.center {
+  display: block;
+  margin: 20px auto;
+  max-width: 100%;
+  height: auto;
+}
+.theory-content ul {
+  padding-left: 24px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.theory-content ul li a {
+  color: var(--accent);
+}
 
 /* ─── States ─────────────────────────────────────────────────────────── */
 .loading {

@@ -1,62 +1,52 @@
+import { useEffect } from 'react'
+
 export default function Theory() {
+  useEffect(() => { document.title = 'Hensley Ratings - Theory' }, [])
+
   return (
     <main className="page">
-      <h1 className="page-heading">The Theory Behind the Ratings</h1>
+      <h1 className="page-heading">Theory</h1>
       <div className="theory-content">
         <p>
-          The Hensley Rating System assigns a single numeric rating to every college football team by
-          solving a large system of linear equations — one equation per game played. The system is
-          built around a core insight: a team's rating should equal the average of its opponents'
-          ratings, offset by how convincingly it won or lost each game.
+          This rating system was created for my graduate project at North Dakota State University. It takes into
+          account the location of games played and the final score. The mathematics behind the ratings are based
+          on the least squares approach and the system of equations that is created is of the following form:
         </p>
-
-        <h2>Level of Victory</h2>
+        <img className="center" src="/SystemOfEquations.jpg" alt="System of Equations" />
         <p>
-          Raw point differential rewards blowouts too heavily. Instead, each game contributes a
-          nonlinear <em>Level of Victory</em> value clamped between 1.0 and 4.0:
+          However, the Hensley Rating system does not use the point differential directly. Instead, it uses a
+          function to compute a value from each game's final score. The equation is the following:
         </p>
-        <div className="math">
-          LOV = √((1 − loserScore / winnerScore) × (winnerScore − loserScore))
-        </div>
+        <img className="center" src="/LevelOfVictory.jpg" alt="Level of Victory Equation" />
         <p>
-          This formula increases quickly for close games and flattens out as the margin grows,
-          reducing the incentive to run up the score.
+          To get an idea of how this equation maps out to various scores, I plotted the values for various point
+          differentials. The graph below shows how greater point differentials result in a higher level of victory,
+          but with a diminishing return as the winning score increases. The rationale behind this is that games with
+          higher scores have a higher level of unpredictability. For instance, a team that loses 10 - 0 is much less
+          likely to have won the game given a few breaks or another drive than a team that loses 40 - 30.
         </p>
-
-        <h2>Home Field Advantage</h2>
+        <img className="center" src="/LevelOfVictoryGraph.jpg" alt="Level of Victory Graph" />
         <p>
-          One variant of the system treats home field advantage as an unknown to be solved for
-          rather than a fixed constant. The linear system gains an extra variable: the value of
-          playing at home. For the 2024 season, this came out to approximately 1.0 rating points.
-        </p>
-
-        <h2>Solving the System</h2>
-        <p>
-          The system of equations is assembled into a matrix and solved via Gauss–Jordan
-          elimination — the same algorithm taught in a first linear algebra course. Every team,
-          conference, and division gets a rating in one pass.
+          The intent of the Hensley Rating is to reward teams that play a difficult schedule and win games with a
+          high level of victory. Therefore, defensively dominant teams that keep the scores low but have lower point
+          differential than some of the high scoring offenses won't be penalized. I believe this greatly bridges the
+          importance of both defense and offense in a team. In rating systems with only point differential, a team with
+          a mediocre defense but a terrific offense is rewarded much more than a team with a terrific defense but a
+          mediocre offense.
         </p>
         <p>
-          Teams that have not played each other — directly or through common opponents — cannot be
-          compared using this method. The system partitions the full schedule into connected
-          components and solves each independently.
+          To learn more about the Hensley Rating, feel free to read through my graduate paper{' '}
+          <a href="/Advanced_Computational_Ratings_for_College_Football_Teams.pdf"><b>here.</b></a>
         </p>
-
-        <h2>Four Rating Variants</h2>
-        <p>The system produces four ratings per team:</p>
-        <ul style={{ paddingLeft: 20, lineHeight: 1.8, color: 'var(--muted)' }}>
-          <li><strong style={{ color: 'var(--text)' }}>Standard</strong> — raw point differential as the right-hand side</li>
-          <li><strong style={{ color: 'var(--text)' }}>Home Field Advantage</strong> — HFA solved as an additional unknown</li>
-          <li><strong style={{ color: 'var(--text)' }}>Max Point Differential</strong> — Standard with per-game margin capped at 14 points</li>
-          <li><strong style={{ color: 'var(--text)' }}>Hensley</strong> — HFA plus the nonlinear LOV scoring function (this is the headline rating)</li>
+        <p>Listed below are the current BCS computer ratings:</p>
+        <ul>
+          <li><a href="http://masseyratings.com/rate.php?lg=cf">Massey Ratings</a></li>
+          <li><a href="http://prwolfe.bol.ucla.edu/cfootball/">Wolfe Ratings</a></li>
+          <li><a href="http://www.usatoday.com/sports/sagarin.htm">Sagarin Ratings</a></li>
+          <li><a href="http://www.cfrc.com/">Billingsley Ratings</a></li>
+          <li><a href="http://www.andersonsports.com/football/ACF_frnk.html">Anderson/Hester Ratings</a></li>
+          <li><a href="http://www.colleyrankings.com/">Colley Ratings</a></li>
         </ul>
-
-        <h2>Academic Background</h2>
-        <p>
-          This rating system originated as a graduate research project. The full mathematical
-          derivation is available in the accompanying paper:{' '}
-          <em>Advanced Computational Ratings for College Football Teams</em>.
-        </p>
       </div>
     </main>
   )
