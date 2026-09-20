@@ -233,12 +233,12 @@ body {
 .ratings-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 21px;
+  font-size: 17px;
   font-variant-numeric: tabular-nums;
 }
 .ratings-table th {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -269,7 +269,7 @@ body {
 .rank-num {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 21px;
+  font-size: 17px;
   color: var(--muted);
   min-width: 28px;
   display: inline-block;
@@ -281,21 +281,21 @@ body {
 }
 .team-link:hover { color: var(--accent); }
 .conf-badge {
-  font-size: 17px;
+  font-size: 14px;
   color: var(--muted);
   margin-left: 4px;
 }
 .record {
   color: var(--muted);
-  font-size: 20px;
+  font-size: 16px;
 }
 .rating-val {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 23px;
+  font-size: 18px;
 }
 .rank-change {
-  font-size: 18px;
+  font-size: 14px;
   font-family: var(--font-display);
   font-weight: 600;
   min-width: 40px;
@@ -437,11 +437,11 @@ body {
   align-items: center;
   padding: 8px 10px;
   border-bottom: 1px solid var(--border);
-  font-size: 20px;
+  font-size: 16px;
 }
 .game-log-row:last-child { border-bottom: none; }
-.game-log-date { color: var(--muted); font-size: 18px; }
-.game-log-result { font-weight: 700; font-size: 20px; }
+.game-log-date { color: var(--muted); font-size: 14px; }
+.game-log-result { font-weight: 700; font-size: 16px; }
 .game-log-result.w { color: var(--up); }
 .game-log-result.l { color: var(--down); }
 
