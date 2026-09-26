@@ -563,7 +563,8 @@ namespace DatabaseLayer
         {
             return from g in Games
                    join ht in Teams on g.HomeTeamID equals ht.ID
-                   where ht.Group == groupNum
+                   join at in Teams on g.AwayTeamID equals at.ID
+                   where ht.Group == groupNum && at.Group == groupNum
                    select g;
         }
 
@@ -571,7 +572,8 @@ namespace DatabaseLayer
         {
             return from g in Games
                    join ht in Teams on g.HomeTeamID equals ht.ID
-                   where ht.Group == groupNum && g.Year == year
+                   join at in Teams on g.AwayTeamID equals at.ID
+                   where ht.Group == groupNum && at.Group == groupNum && g.Year == year
                    select g;
         }
 
