@@ -156,6 +156,45 @@ The evaluator outputs a `results.csv` with mistake count, total error (Potemkin'
 
 ---
 
+## Deploying to AWS
+
+The site runs on an EC2 instance provisioned via OpenTofu (`infra/`). The deploy script builds the frontend and backend locally, packages them with the SQLite database, and hot-swaps the running service on the server.
+
+### Prerequisites
+
+- SSH key at `~/.ssh/hensley-ratings` (matches the key pair in `infra/`)
+- AWS profile `terraform-deploy` configured (used by OpenTofu; not needed for the deploy script itself)
+
+### One-command deploy
+
+```bash
+EC2_HOST=100.62.134.10 bash scripts/deploy.sh
+```
+
+`EC2_HOST` defaults to nothing — always pass it explicitly, or export it. The current elastic IP comes from:
+
+```bash
+cd infra && tofu output elastic_ip
+```
+
+### What it does
+
+1. Builds the React frontend (`npm run build`)
+2. Publishes the ASP.NET Core API as a self-contained linux-x64 binary
+3. Copies the SQLite database (`src/console/BuildFiles/collegefootball.db`)
+4. Packages all three into a tarball and uploads it via `scp`
+5. Runs `scripts/swap-deploy.sh` on the server — stops the systemd service, unpacks, restarts, and verifies
+
+### Infrastructure changes
+
+```bash
+cd infra
+tofu plan   # review
+tofu apply  # apply
+```
+
+---
+
 ## Web Layer
 
 A React frontend and ASP.NET Core API for browsing ratings in the browser.
