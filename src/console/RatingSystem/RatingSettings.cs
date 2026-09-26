@@ -23,6 +23,7 @@ namespace RatingSystem
         public int CurrentWeek;
         public DateTime CurrentCutoffDate;
         public bool SkipUnchangedWeeks;
+        public bool LargestGroupOnly;
 
         public RatingSettings()
         {
@@ -32,6 +33,8 @@ namespace RatingSystem
                 MinWeek = mw;
             if (int.TryParse(Environment.GetEnvironmentVariable("MIN_GROUP_SIZE"), out int minG))
                 MinGroupSize = minG;
+
+            LargestGroupOnly = IsEnabled("LARGEST_GROUP_ONLY");
 
             ComputeHensleyRatings              = IsEnabled("HENSLEY_RATING_ENABLED");
             ComputeStandardRatings             = IsEnabled("STANDARD_RATING_ENABLED");

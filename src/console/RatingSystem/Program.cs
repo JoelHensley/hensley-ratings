@@ -77,35 +77,32 @@ namespace RatingSystem
 
                 if (settings.ComputeTeamRatings)
                 {
-                    var groups = allTeams.Where(t => t.Group != null).Select(t => t.Group).Distinct().ToList();
+                    var groups = allTeams.Where(t => t.Group != null).Select(t => t.Group).Distinct()
+                        .Where(g => allTeams.Count(t => t.Group == g) >= settings.MinGroupSize).ToList();
+                    if (settings.LargestGroupOnly)
+                        groups = groups.OrderByDescending(g => allTeams.Count(t => t.Group == g)).Take(1).ToList();
                     foreach (int group in groups)
-                    {
-                        int count = allTeams.Count(t => t.Group == group);
-                        if (count >= settings.MinGroupSize)
-                            ComputeTeamRatings(group);
-                    }
+                        ComputeTeamRatings(group);
                 }
 
                 if (settings.ComputeConferenceRatings)
                 {
-                    var groups = allConferences.Where(c => c.Group != null).Select(c => c.Group).Distinct().ToList();
+                    var groups = allConferences.Where(c => c.Group != null).Select(c => c.Group).Distinct()
+                        .Where(g => allConferences.Count(c => c.Group == g) >= settings.MinGroupSize).ToList();
+                    if (settings.LargestGroupOnly)
+                        groups = groups.OrderByDescending(g => allConferences.Count(c => c.Group == g)).Take(1).ToList();
                     foreach (int group in groups)
-                    {
-                        int count = allConferences.Count(c => c.Group == group);
-                        if (count >= settings.MinGroupSize)
-                            ComputeConferenceRatings(group);
-                    }
+                        ComputeConferenceRatings(group);
                 }
 
                 if (settings.ComputeDivisionRatings)
                 {
-                    var groups = allDivisions.Where(d => d.Group != null).Select(d => d.Group).Distinct().ToList();
+                    var groups = allDivisions.Where(d => d.Group != null).Select(d => d.Group).Distinct()
+                        .Where(g => allDivisions.Count(d => d.Group == g) >= settings.MinGroupSize).ToList();
+                    if (settings.LargestGroupOnly)
+                        groups = groups.OrderByDescending(g => allDivisions.Count(d => d.Group == g)).Take(1).ToList();
                     foreach (int group in groups)
-                    {
-                        int count = allDivisions.Count(d => d.Group == group);
-                        if (count >= settings.MinGroupSize)
-                            ComputeDivisionRatings(group);
-                    }
+                        ComputeDivisionRatings(group);
                 }
 
                 ws.ComputedGameCount = weekGames.Count;
