@@ -1,0 +1,15 @@
+[Unit]
+Description=Hensley Ratings API
+After=network.target
+
+[Service]
+User=hrapi
+WorkingDirectory=/opt/hensley-ratings/api
+ExecStart=/opt/hensley-ratings/api/HensleyRatings.Api
+Environment=ASPNETCORE_URLS=http://localhost:5000
+Environment=DbPath=/opt/hensley-ratings/db/collegefootball.db
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
