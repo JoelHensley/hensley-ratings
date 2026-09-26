@@ -207,10 +207,10 @@ A React frontend and ASP.NET Core API for browsing ratings in the browser.
 Quick start (after running the console pipeline at least once):
 
 ```bash
-# terminal 1 — API
-cd src/web-backend && dotnet run --project HensleyRatings.Api --launch-profile http
+# terminal 1 — API (port 5000)
+cd src/web-backend/HensleyRatings.Api && dotnet run --urls http://localhost:5000
 
-# terminal 2 — UI
+# terminal 2 — UI (port 5173, proxies /api to port 5000)
 cd src/web-frontend && npm install && npm run dev
 ```
 
