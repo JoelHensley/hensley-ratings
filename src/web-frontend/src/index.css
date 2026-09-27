@@ -623,7 +623,13 @@ body {
 
 /* ─── Responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
+  /* Compact nav so brand + 3 links fit on narrow phones */
+  .nav-inner { padding-inline: 12px; }
+  .nav-brand { margin-right: 12px; font-size: 16px; }
+  .nav-link { padding: 6px 8px; font-size: 12px; }
+
   .page { padding-inline: 16px; overflow-x: hidden; }
+  .page-heading { font-size: 22px; }
   .team-header { grid-template-columns: 1fr; }
   .game-row { grid-template-columns: 1fr auto 1fr; }
 
