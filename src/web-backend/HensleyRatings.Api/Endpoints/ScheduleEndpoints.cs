@@ -11,10 +11,12 @@ public static class ScheduleEndpoints
         app.MapGet("/api/schedule", async (
             int year,
             int week,
+            int? ratingsWeek,
             int? divisionId,
             int? conferenceId,
             CollegeFootballEntities db) =>
         {
+            var rWeek = ratingsWeek ?? week;
             // Get cutoff date for this week
             var weekSetting = await db.WeekSettings
                 .FirstOrDefaultAsync(ws => ws.Year == year && ws.Week == week);
@@ -67,11 +69,11 @@ public static class ScheduleEndpoints
             // Load ratings for both teams to power predictions + stats
             var allTeamIds = games.SelectMany(g => new[] { g.HomeTeamID, g.AwayTeamID }).Distinct().ToList();
             var ratings = await db.TeamResults
-                .Where(tr => tr.Year == year && tr.Week == week && allTeamIds.Contains(tr.TeamID))
+                .Where(tr => tr.Year == year && tr.Week == rWeek && allTeamIds.Contains(tr.TeamID))
                 .ToListAsync();
 
             var allResults = await db.TeamResults
-                .Where(tr => tr.Year == year && tr.Week == week)
+                .Where(tr => tr.Year == year && tr.Week == rWeek)
                 .OrderByDescending(tr => tr.HensleyRating)
                 .ToListAsync();
 

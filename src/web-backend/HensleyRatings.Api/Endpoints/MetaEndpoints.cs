@@ -26,9 +26,15 @@ public static class MetaEndpoints
                 .ToListAsync();
 
             List<WeekSettings> weeks;
+            HashSet<int> weeksWithRatings;
             if (allWeeks == true)
             {
                 weeks = allWeekSettings;
+                weeksWithRatings = (await db.TeamResults
+                    .Where(tr => tr.Year == year)
+                    .Select(tr => tr.Week)
+                    .Distinct()
+                    .ToListAsync()).ToHashSet();
             }
             else
             {
@@ -46,12 +52,14 @@ public static class MetaEndpoints
                     if (hasGames)
                         weeks.Add(ws);
                 }
+                weeksWithRatings = weeks.Select(ws => ws.Week).ToHashSet();
             }
 
             var options = weeks.Select((ws, i) => new WeekOption(
                 ws.Week,
                 ws.CutoffDate,
-                i > 0
+                i > 0,
+                weeksWithRatings.Contains(ws.Week)
             ));
             return Results.Ok(new MetaWeeksResponse(options));
         });

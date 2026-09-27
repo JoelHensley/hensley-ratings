@@ -96,6 +96,7 @@ export interface WeekOption {
   week: number
   cutoffDate: string
   hasPrevious: boolean
+  hasRatings: boolean
 }
 
 export interface Division {

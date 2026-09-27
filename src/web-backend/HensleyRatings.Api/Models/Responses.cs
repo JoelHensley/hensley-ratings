@@ -94,7 +94,7 @@ public record ByeWeekResponse(
     int? ScheduleStrengthRankDelta
 );
 
-public record WeekOption(int Week, string CutoffDate, bool HasPrevious);
+public record WeekOption(int Week, string CutoffDate, bool HasPrevious, bool HasRatings);
 public record MetaWeeksResponse(IEnumerable<WeekOption> Weeks);
 public record MetaYearsResponse(IEnumerable<int> Years);
 public record DivisionResponse(int DivisionId, string Name);

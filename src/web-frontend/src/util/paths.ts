@@ -54,7 +54,7 @@ export function buildSchedulePath(
   div: DivOpt | undefined,
   conf?: ConfOpt,
 ): string {
-  if (!div) return week ? `/schedule/${year}/week-${week}` : `/schedule/${year}`
+  if (!div) return week ? `/schedule/${year}/week-${week}/all` : `/schedule/${year}`
   const weekSeg = week ? `/week-${week}` : ''
   const divSeg = `${slugify(div.name)}/${div.id}`
   if (!conf) return `/schedule/${year}${weekSeg}/${divSeg}`

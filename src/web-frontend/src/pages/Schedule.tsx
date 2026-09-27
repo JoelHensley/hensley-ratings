@@ -13,11 +13,17 @@ const DIV_ABBREV: Record<string, string> = { 'Division-II': 'D-II', 'Division-II
 const shortDivName = (name: string) => DIV_ABBREV[name] ?? name
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   })
+}
+
+function bestRank(g: ScheduleGame) {
+  const r = Math.min(g.homeTeamRank ?? Infinity, g.awayTeamRank ?? Infinity)
+  return r === Infinity ? 99999 : r
 }
 
 function groupByDate(games: ScheduleGame[]) {
@@ -26,6 +32,9 @@ function groupByDate(games: ScheduleGame[]) {
     const key = g.date.slice(0, 10)
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(g)
+  }
+  for (const group of groups.values()) {
+    group.sort((a, b) => bestRank(a) - bestRank(b))
   }
   return groups
 }
@@ -40,8 +49,10 @@ export default function Schedule() {
     queryFn: () => api.years(),
   })
 
-  const latestAvailableYear = yearsData?.years[0] ?? new Date().getFullYear()
-  const year = parsed.year ?? latestAvailableYear
+  const currentCalendarYear = new Date().getFullYear()
+  const availableYears = yearsData?.years ?? []
+  const defaultYear = availableYears.includes(currentCalendarYear) ? currentCalendarYear : (availableYears[0] ?? currentCalendarYear)
+  const year = parsed.year ?? defaultYear
   const divisionId = parsed.divId
   const conferenceId = parsed.confId
   const weekFromUrl = parsed.week ?? 0
@@ -65,13 +76,26 @@ export default function Schedule() {
   })
 
   const availableWeeks = weeksData?.weeks ?? []
-  const latestWeek = availableWeeks.at(-1)?.week ?? 0
-  const activeWeek = weekFromUrl > 0 ? weekFromUrl : latestWeek
+
+  // Default week: first week without ratings, or last week if all have ratings
+  const defaultWeek = (() => {
+    if (availableWeeks.length === 0) return 0
+    const nextUnrated = availableWeeks.find((w) => !w.hasRatings)
+    return nextUnrated?.week ?? availableWeeks.at(-1)!.week
+  })()
+
+  const activeWeek = weekFromUrl > 0 ? weekFromUrl : defaultWeek
+
+  // Most recent week with ratings — used for ranking/predictions on unrated weeks
+  const selectedWeekInfo = availableWeeks.find((w) => w.week === activeWeek)
+  const ratingsWeek = selectedWeekInfo?.hasRatings
+    ? undefined
+    : availableWeeks.filter((w) => w.hasRatings).at(-1)?.week
 
   const { data: games, isLoading, error } = useQuery({
-    queryKey: ['schedule', year, activeWeek, divisionId, conferenceId],
-    queryFn: () => api.schedule(year, activeWeek, divisionId, conferenceId),
-    enabled: activeWeek > 0,
+    queryKey: ['schedule', year, activeWeek, ratingsWeek, divisionId, conferenceId],
+    queryFn: () => api.schedule(year, activeWeek, ratingsWeek, divisionId, conferenceId),
+    enabled: activeWeek > 0 && !!weeksData,
   })
 
   const divisions = divisionsData ?? []
@@ -83,9 +107,29 @@ export default function Schedule() {
   const goTo = (toYear: number, toWeek: number | undefined, toDiv?: { id: number; name: string }, toConf?: { id: number; name: string }) =>
     nav(buildSchedulePath(toYear, toWeek, toDiv, toConf))
 
+  // Redirect to canonical URL when defaults are missing from path
+  useEffect(() => {
+    if (!yearsData || !weeksData || divisions.length === 0 || defaultWeek === 0) return
+    const needsYear = parsed.year === undefined
+    const needsWeek = parsed.week === undefined
+    const needsDiv = divisionId === undefined && !parsed.isAll
+    if (!needsYear && !needsWeek && !needsDiv) return
+    const fbs = divisions.find((d) => d.divisionId === 1) ?? divisions[0]
+    nav(
+      buildSchedulePath(
+        year,
+        activeWeek,
+        needsDiv ? { id: fbs.divisionId, name: fbs.name } : (activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined),
+        activeConference ? { id: activeConference.conferenceId, name: activeConference.name } : undefined,
+      ),
+      { replace: true },
+    )
+  }, [!!yearsData, !!weeksData, divisions.length, defaultWeek, parsed.year, parsed.week, divisionId, parsed.isAll])
+
   const grouped = games ? groupByDate(games) : new Map()
 
-  const gotw = games?.filter((g) => g.isComplete).reduce<ScheduleGame | null>((best, g) => {
+  // Use all games with rank data — completed weeks find best result, future weeks find best upcoming matchup
+  const gotw = games?.reduce<ScheduleGame | null>((best, g) => {
     if (!g.homeTeamRank || !g.awayTeamRank) return best
     const score = g.homeTeamRank + g.awayTeamRank
     if (!best) return g

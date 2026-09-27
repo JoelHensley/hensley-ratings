@@ -27,9 +27,9 @@ export const api = {
     )
   },
 
-  schedule(year: number, week: number, divisionId?: number, conferenceId?: number) {
+  schedule(year: number, week: number, ratingsWeek?: number, divisionId?: number, conferenceId?: number) {
     return get<ScheduleGame[]>(
-      `/api/schedule?${qs({ year, week, divisionId, conferenceId })}`,
+      `/api/schedule?${qs({ year, week, ratingsWeek, divisionId, conferenceId })}`,
     )
   },
 
