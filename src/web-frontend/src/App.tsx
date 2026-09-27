@@ -27,6 +27,16 @@ export default function App() {
           </div>
         </div>
       </nav>
+      <div className="sub-header">
+        <a
+          href="https://x.com/JoelHensley"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="footer-x-link"
+        >
+          @JoelHensley
+        </a>
+      </div>
       <Routes>
         <Route path="/" element={<Navigate to="/ratings" replace />} />
 
@@ -42,15 +52,6 @@ export default function App() {
         <Route path="/theory" element={<Theory />} />
       </Routes>
       <footer className="site-footer">
-        <a
-          href="https://x.com/JoelHensley"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="footer-x-link"
-        >
-          @JoelHensley
-        </a>
-        <span className="footer-sep">·</span>
         <span>© 2010–{CURRENT_YEAR} by Joel Hensley</span>
       </footer>
     </div>

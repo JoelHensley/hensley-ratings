@@ -125,6 +125,17 @@ body {
   background: rgba(255,255,255,0.08);
 }
 
+/* ─── Sub-header (X / Twitter link) ─────────────────────────────────── */
+.sub-header {
+  background: var(--nav-bg);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding: 5px 24px;
+  text-align: right;
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
 /* ─── Layout ─────────────────────────────────────────────────────────── */
 .page {
   max-width: 1100px;
