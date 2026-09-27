@@ -52,9 +52,12 @@ export function buildSchedulePath(
   year: number,
   week: number | undefined,
   div: DivOpt | undefined,
+  conf?: ConfOpt,
 ): string {
   if (!div) return week ? `/schedule/${year}/week-${week}` : `/schedule/${year}`
   const weekSeg = week ? `/week-${week}` : ''
   const divSeg = `${slugify(div.name)}/${div.id}`
-  return `/schedule/${year}${weekSeg}/${divSeg}`
+  if (!conf) return `/schedule/${year}${weekSeg}/${divSeg}`
+  const confSeg = `${slugify(conf.name)}/${conf.id}`
+  return `/schedule/${year}${weekSeg}/${divSeg}/${confSeg}`
 }

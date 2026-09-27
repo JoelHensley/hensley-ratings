@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { RatedTeam } from '../api/types'
+import { YearPicker } from '../components/YearPicker'
 import { buildRatingsPath, buildTeamPath } from '../util/paths'
 import { parseRatingsPath } from '../util/parseRatingsPath'
 import { slugify } from '../util/slugify'
@@ -120,8 +121,12 @@ function RatingsView({
   const sortArrow = (key: SortKey) =>
     sort.key === key ? (sort.dir === 'asc' ? ' ↑' : ' ↓') : ''
 
+  const headingLabel = activeConference
+    ? `${divisionName} — ${activeConference.name}`
+    : divisionName
+
   useEffect(() => {
-    const pageTitle = `${divisionName} Ratings | Week ${activeWeek} | ${year} | Hensley Ratings`
+    const pageTitle = `${headingLabel} Ratings | Week ${activeWeek} | ${year} | Hensley Ratings`
     document.title = pageTitle
     const setMeta = (sel: string, attrName: string, attrVal: string, content: string) => {
       let el = document.querySelector(sel) as HTMLMetaElement | null
@@ -144,28 +149,21 @@ function RatingsView({
     setMeta('meta[property="og:url"]', 'property', 'og:url', window.location.href)
     setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', `Hensley Ratings for week ${activeWeek}`)
     setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', desc)
-  }, [divisionName, activeWeek, year, ratings])
+  }, [headingLabel, activeWeek, year, ratings])
 
   return (
     <main className="page">
       <h1 className="page-heading">
-        {divisionName}{activeWeek > 0 && ` — Week ${activeWeek}`}
+        {headingLabel}{activeWeek > 0 && ` — Week ${activeWeek}`}
       </h1>
 
       {/* Year picker */}
-      {yearsData && yearsData.years.length > 1 && (
-        <div className="year-nav">
-          {yearsData.years.slice().reverse().map((y) => (
-            <span key={y}>
-              <Link
-                to={buildRatingsPath(y, undefined, activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined)}
-                className={`year-link${y === year ? ' active' : ''}`}
-              >
-                {y}
-              </Link>
-            </span>
-          ))}
-        </div>
+      {yearsData && yearsData.years.length > 0 && (
+        <YearPicker
+          years={yearsData.years}
+          activeYear={year}
+          buildPath={(y) => buildRatingsPath(y, undefined, activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined)}
+        />
       )}
 
       {/* Week navigation */}
@@ -264,7 +262,7 @@ function RatingsView({
                   className={sort.key === 'wins' ? 'sorted' : ''}
                   onClick={() => toggleSort('wins')}
                 >
-                  Record{sortArrow('wins')}
+                  Rec{sortArrow('wins')}
                 </th>
                 <th
                   className={sort.key === 'hensleyRating' ? 'sorted' : ''}
@@ -276,7 +274,7 @@ function RatingsView({
                   className={sort.key === 'scheduleStrength' ? 'sorted' : ''}
                   onClick={() => toggleSort('scheduleStrength')}
                 >
-                  Sched Strength{sortArrow('scheduleStrength')}
+                  Sch Str{sortArrow('scheduleStrength')}
                 </th>
                 <th
                   className={sort.key === 'weekOverWeekChange' ? 'sorted' : ''}
@@ -288,7 +286,7 @@ function RatingsView({
             </thead>
             <tbody>
               {sortedRatings.map((team) => (
-                <RatingRow key={team.teamId} team={team} year={year} activeConferenceId={conferenceId} />
+                <RatingRow key={team.teamId} team={team} year={year} activeDivisionId={divisionId} activeConferenceId={conferenceId} />
               ))}
             </tbody>
           </table>
@@ -301,7 +299,7 @@ function RatingsView({
   )
 }
 
-function RatingRow({ team, year, activeConferenceId }: { team: RatedTeam; year: number; activeConferenceId?: number }) {
+function RatingRow({ team, year, activeDivisionId, activeConferenceId }: { team: RatedTeam; year: number; activeDivisionId?: number; activeConferenceId?: number }) {
   const change = team.weekOverWeekChange
   let changeClass = 'same'
   let changeLabel = '—'
@@ -322,6 +320,13 @@ function RatingRow({ team, year, activeConferenceId }: { team: RatedTeam; year: 
             #{team.rankConference}
             <span style={{ fontSize: '0.75em', fontWeight: 400, color: 'var(--muted)', marginLeft: 3 }}>
               (#{team.rankDivision})
+            </span>
+          </span>
+        ) : activeDivisionId ? (
+          <span className="rank-num">
+            #{team.rankDivision}
+            <span style={{ fontSize: '0.75em', fontWeight: 400, color: 'var(--muted)', marginLeft: 3 }}>
+              (#{team.rankOverall})
             </span>
           </span>
         ) : (

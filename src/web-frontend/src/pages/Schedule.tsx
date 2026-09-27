@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { ScheduleGame } from '../api/types'
+import { YearPicker } from '../components/YearPicker'
 import { buildSchedulePath } from '../util/paths'
 import { parseRatingsPath } from '../util/parseRatingsPath'
 import { slugify } from '../util/slugify'
@@ -41,6 +42,7 @@ export default function Schedule() {
   const latestAvailableYear = yearsData?.years[0] ?? new Date().getFullYear()
   const year = parsed.year ?? latestAvailableYear
   const divisionId = parsed.divId
+  const conferenceId = parsed.confId
   const weekFromUrl = parsed.week ?? 0
 
   // Schedule shows ALL weeks (including ones without ratings)
@@ -55,22 +57,30 @@ export default function Schedule() {
     queryFn: () => api.divisions(),
   })
 
+  const { data: conferencesData } = useQuery({
+    queryKey: ['conferences', year, divisionId],
+    queryFn: () => api.conferences(year, divisionId),
+    enabled: divisionId !== undefined,
+  })
+
   const availableWeeks = weeksData?.weeks ?? []
   const latestWeek = availableWeeks.at(-1)?.week ?? 0
   const activeWeek = weekFromUrl > 0 ? weekFromUrl : latestWeek
 
   const { data: games, isLoading, error } = useQuery({
-    queryKey: ['schedule', year, activeWeek, divisionId],
-    queryFn: () => api.schedule(year, activeWeek, divisionId),
+    queryKey: ['schedule', year, activeWeek, divisionId, conferenceId],
+    queryFn: () => api.schedule(year, activeWeek, divisionId, conferenceId),
     enabled: activeWeek > 0,
   })
 
   const divisions = divisionsData ?? []
+  const conferences = conferencesData ?? []
   const activeDivision = divisions.find((d) => d.divisionId === divisionId)
+  const activeConference = conferences.find((c) => c.conferenceId === conferenceId)
   const divisionName = activeDivision?.name ?? 'All'
 
-  const goTo = (toYear: number, toWeek: number | undefined, toDiv?: { id: number; name: string }) =>
-    nav(buildSchedulePath(toYear, toWeek, toDiv))
+  const goTo = (toYear: number, toWeek: number | undefined, toDiv?: { id: number; name: string }, toConf?: { id: number; name: string }) =>
+    nav(buildSchedulePath(toYear, toWeek, toDiv, toConf))
 
   const grouped = games ? groupByDate(games) : new Map()
 
@@ -93,19 +103,12 @@ export default function Schedule() {
       </h1>
 
       {/* Year picker */}
-      {yearsData && yearsData.years.length > 1 && (
-        <div className="year-nav">
-          {yearsData.years.slice().reverse().map((y) => (
-            <span key={y}>
-              <Link
-                to={buildSchedulePath(y, undefined, activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined)}
-                className={`year-link${y === year ? ' active' : ''}`}
-              >
-                {y}
-              </Link>
-            </span>
-          ))}
-        </div>
+      {yearsData && yearsData.years.length > 0 && (
+        <YearPicker
+          years={yearsData.years}
+          activeYear={year}
+          buildPath={(y) => buildSchedulePath(y, undefined, activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined)}
+        />
       )}
 
       {/* Week nav */}
@@ -115,7 +118,11 @@ export default function Schedule() {
             <button
               key={w.week}
               className={`week-pill${w.week === activeWeek ? ' active' : ''}`}
-              onClick={() => goTo(year, w.week, activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined)}
+              onClick={() => goTo(
+                year, w.week,
+                activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined,
+                activeConference ? { id: activeConference.conferenceId, name: activeConference.name } : undefined,
+              )}
             >
               Wk {w.week}
             </button>
@@ -145,6 +152,35 @@ export default function Schedule() {
           </button>
         ))}
       </div>
+
+      {/* Conference filter (only when a division is selected) */}
+      {divisionId !== undefined && conferences.length > 0 && (
+        <div className="filter-bar conf-bar" role="tablist">
+          <button
+            role="tab"
+            aria-selected={!conferenceId}
+            className={`filter-tab${!conferenceId ? ' active' : ''}`}
+            onClick={() => goTo(year, activeWeek, activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined)}
+          >
+            All conferences
+          </button>
+          {conferences.map((c) => (
+            <button
+              key={c.conferenceId}
+              role="tab"
+              aria-selected={conferenceId === c.conferenceId}
+              className={`filter-tab${conferenceId === c.conferenceId ? ' active' : ''}`}
+              onClick={() => goTo(
+                year, activeWeek,
+                activeDivision ? { id: activeDivision.divisionId, name: activeDivision.name } : undefined,
+                { id: c.conferenceId, name: c.name },
+              )}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {isLoading && <div className="loading">Loading schedule…</div>}
       {error && <div className="error">Failed to load schedule. Is the API running?</div>}
