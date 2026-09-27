@@ -1,10 +1,28 @@
 import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
+import type { TeamGame } from '../api/types'
 import { XLogo } from '../components/XLogo'
 import { YearPicker } from '../components/YearPicker'
 import { buildRatingsPath, buildTeamPath } from '../util/paths'
 import { slugify } from '../util/slugify'
+
+type LogEntry = { kind: 'game'; game: TeamGame } | { kind: 'bye'; week: number }
+
+function buildMergedLog(games: TeamGame[], byeWeeks: number[]): LogEntry[] {
+  const result: LogEntry[] = []
+  const sortedByes = [...byeWeeks].sort((a, b) => a - b)
+  let byeIdx = 0
+  for (const game of games) {
+    while (byeIdx < sortedByes.length && (game.weekNumber == null || sortedByes[byeIdx] < game.weekNumber)) {
+      result.push({ kind: 'bye', week: sortedByes[byeIdx++] })
+    }
+    result.push({ kind: 'game', game })
+  }
+  while (byeIdx < sortedByes.length) result.push({ kind: 'bye', week: sortedByes[byeIdx++] })
+  return result
+}
 
 const DIV_ABBREV: Record<string, string> = {
   'Division-II': 'D-II',
@@ -34,6 +52,11 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
     queryFn: () => api.team(effectiveId!, year),
     enabled: !!effectiveId,
   })
+
+  const mergedLog = useMemo(
+    () => team ? buildMergedLog(team.games, team.byeWeeks) : [],
+    [team],
+  )
 
   if (isLoading) return <main className="page"><div className="loading">Loading team…</div></main>
   if (error || !team) return <main className="page"><div className="error">Team not found.</div></main>
@@ -141,7 +164,16 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
             <span>Rating</span>
             <span>Sch Str</span>
           </div>
-          {team.games.map((g) => {
+          {mergedLog.map((entry) => {
+            if (entry.kind === 'bye') {
+              return (
+                <div key={`bye-${entry.week}`} className="game-log-bye">
+                  BYE WEEK
+                </div>
+              )
+            }
+
+            const g = entry.game
             const isWin = g.isWin
             const isComplete = g.teamScore !== null
 
@@ -230,6 +262,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
           {team.games.length === 0 && (
             <div className="empty">No games on record for this team.</div>
           )}
+
         </div>
       </section>
     </main>

@@ -59,6 +59,7 @@ export interface TeamGame {
   scheduleStrength: number | null
   scheduleStrengthRank: number | null
   scheduleStrengthRankDelta: number | null
+  weekNumber: number | null
 }
 
 export interface TeamDetail {
@@ -76,6 +77,7 @@ export interface TeamDetail {
   pointsScored: number | null
   pointsAllowed: number | null
   games: TeamGame[]
+  byeWeeks: number[]
 }
 
 export interface WeekOption {

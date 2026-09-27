@@ -550,6 +550,19 @@ body {
 }
 .game-log-row:last-child { border-bottom: none; }
 .game-log-header { background: var(--surface); }
+.game-log-bye {
+  padding: 5px 10px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  min-width: 560px;
+}
+.game-log-bye:last-child { border-bottom: none; }
 .game-log-date { color: var(--muted); font-size: 14px; }
 .game-log-result { font-weight: 700; font-size: 16px; }
 .game-log-result.w { color: var(--up); }

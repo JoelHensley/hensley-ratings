@@ -177,9 +177,17 @@ public static class TeamsEndpoints
                     teamRankDelta,
                     schedStrength,
                     schedRank,
-                    schedRankDelta
+                    schedRankDelta,
+                    gameWeek?.Week
                 );
             }).ToList();
+
+            // Weeks that have ratings but no game — bye weeks
+            var gameWeekNumbers = gameLog.Where(g => g.WeekNumber.HasValue).Select(g => g.WeekNumber!.Value).ToHashSet();
+            var byeWeeks = weeklyRatingByWeek.Keys
+                .Where(w => !gameWeekNumbers.Contains(w))
+                .OrderBy(w => w)
+                .ToList();
 
             var response = new TeamDetailResponse(
                 id,
@@ -195,7 +203,8 @@ public static class TeamsEndpoints
                 latestResult.ScheduleStrength,
                 latestResult.PointsScored,
                 latestResult.PointsAllowed,
-                gameLog
+                gameLog,
+                byeWeeks
             );
 
             return Results.Ok(response);

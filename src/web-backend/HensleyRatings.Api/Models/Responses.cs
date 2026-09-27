@@ -60,7 +60,8 @@ public record TeamGameResponse(
     int? TeamRankDelta,
     double? ScheduleStrength,
     int? ScheduleStrengthRank,
-    int? ScheduleStrengthRankDelta
+    int? ScheduleStrengthRankDelta,
+    int? WeekNumber
 );
 
 public record TeamDetailResponse(
@@ -77,7 +78,8 @@ public record TeamDetailResponse(
     double ScheduleStrength,
     int? PointsScored,
     int? PointsAllowed,
-    IEnumerable<TeamGameResponse> Games
+    IEnumerable<TeamGameResponse> Games,
+    IEnumerable<int> ByeWeeks
 );
 
 public record WeekOption(int Week, string CutoffDate, bool HasPrevious);
