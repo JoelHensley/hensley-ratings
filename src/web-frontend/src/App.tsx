@@ -29,12 +29,12 @@ export default function App() {
       </nav>
       <div className="sub-header">
         <a
-          href="https://x.com/JoelHensley"
+          href="https://x.com/HensleyRatings"
           target="_blank"
           rel="noopener noreferrer"
           className="footer-x-link"
         >
-          @JoelHensley
+          @HensleyRatings
         </a>
       </div>
       <Routes>
