@@ -37,6 +37,7 @@ namespace DatabaseLayer
                    where ht.ConferenceID != at.ConferenceID
                        && hc.Group == conferenceGroup
                        && g.Year == year
+                       && (g.HomeScore > 0 || g.AwayScore > 0)
                    select g;
         }
 
@@ -69,6 +70,7 @@ namespace DatabaseLayer
                    where hc.DivisionID != ac.DivisionID
                        && hd.Group == divisionGroup
                        && g.Year == year
+                       && (g.HomeScore > 0 || g.AwayScore > 0)
                    select g;
         }
 
@@ -574,6 +576,7 @@ namespace DatabaseLayer
                    join ht in Teams on g.HomeTeamID equals ht.ID
                    join at in Teams on g.AwayTeamID equals at.ID
                    where ht.Group == groupNum && at.Group == groupNum && g.Year == year
+                         && (g.HomeScore > 0 || g.AwayScore > 0)
                    select g;
         }
 
@@ -667,10 +670,12 @@ namespace DatabaseLayer
             => GetInterDivisionGames(divisionGroup, year).Where(g => g.Date <= cutoffDate);
 
         public IEnumerable<Game> GetGames(Conference conference, int year, DateTime cutoffDate)
-            => GetGames(conference).Where(g => g.Year == year && g.Date <= cutoffDate);
+            => GetGames(conference).Where(g => g.Year == year && g.Date <= cutoffDate
+                                              && (g.HomeScore > 0 || g.AwayScore > 0));
 
         public IEnumerable<Game> GetGames(Division division, int year, DateTime cutoffDate)
-            => GetGames(division).Where(g => g.Year == year && g.Date <= cutoffDate);
+            => GetGames(division).Where(g => g.Year == year && g.Date <= cutoffDate
+                                            && (g.HomeScore > 0 || g.AwayScore > 0));
 
         /// <summary>
         /// Deletes all rows from all tables in the database.

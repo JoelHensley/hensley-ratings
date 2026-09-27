@@ -50,6 +50,48 @@ else
 fi
 echo ""
 
+# ── Step 1b: Append future scheduled games ────────────────────────────────────
+if [[ -n "${SCHEDULE_DATA_FILE:-}" ]]; then
+    EXPANDED_SCHED="${SCHEDULE_DATA_FILE/#\~/$HOME}"
+    if [[ -f "$EXPANDED_SCHED" ]]; then
+        echo "[1b/3] Merging future games from schedule..."
+        python3 - "$BUILD_DIR/converted-games.csv" "$EXPANDED_SCHED" <<'PYEOF'
+import sys
+from datetime import datetime
+
+scored_file, schedule_file = sys.argv[1], sys.argv[2]
+
+def parse(d):
+    for fmt in ("%d-%b-%y", "%Y-%m-%d"):
+        try: return datetime.strptime(d.strip(), fmt)
+        except ValueError: pass
+    return None
+
+with open(scored_file) as f:
+    scored_lines = f.read().splitlines()
+
+max_date = max((parse(l.split(",")[0]) for l in scored_lines if l), default=None)
+
+if max_date:
+    future = []
+    with open(schedule_file) as f:
+        for line in f:
+            line = line.strip()
+            if not line: continue
+            d = parse(line.split(",")[0])
+            if d and d > max_date:
+                future.append(line)
+    with open(scored_file, "a") as f:
+        for line in future:
+            f.write(line + "\n")
+    print(f"  Appended {len(future)} future games (cutoff: {max_date.strftime('%d-%b-%y')})")
+else:
+    print("  No scored games found; skipping merge")
+PYEOF
+        echo ""
+    fi
+fi
+
 # ── Step 2: Import into database ──────────────────────────────────────────────
 echo "[2/3] Importing into database..."
 cd "$BUILD_DIR"

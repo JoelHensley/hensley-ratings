@@ -99,10 +99,12 @@ namespace RatingSystem
         }
 
         protected IList<Game> GetTeamHomeGames(Team team)
-            => team.HomeGames.Where(g => g.Year == ratingSettings.Year && g.Date <= ratingSettings.CurrentCutoffDate).ToList();
+            => team.HomeGames.Where(g => g.Year == ratingSettings.Year && g.Date <= ratingSettings.CurrentCutoffDate
+                                      && (g.HomeScore > 0 || g.AwayScore > 0)).ToList();
 
         protected IList<Game> GetTeamAwayGames(Team team)
-            => team.AwayGames.Where(g => g.Year == ratingSettings.Year && g.Date <= ratingSettings.CurrentCutoffDate).ToList();
+            => team.AwayGames.Where(g => g.Year == ratingSettings.Year && g.Date <= ratingSettings.CurrentCutoffDate
+                                      && (g.HomeScore > 0 || g.AwayScore > 0)).ToList();
 
         /// <summary>
         /// Creates a mapping of team IDs to matrix row numbers

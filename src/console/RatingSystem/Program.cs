@@ -39,7 +39,8 @@ namespace RatingSystem
             var allTeams       = entities.Teams.ToList();
             var allConferences = entities.Conferences.ToList();
             var allDivisions   = entities.Divisions.ToList();
-            var allGames       = entities.Games.Where(g => g.Year == settings.Year).ToList();
+            var allGames       = entities.Games.Where(g => g.Year == settings.Year
+                                                       && (g.HomeScore > 0 || g.AwayScore > 0)).ToList();
 
             var weekSettingsList = entities.WeekSettings
                 .Where(ws => ws.Year == settings.Year && ws.Week >= settings.MinWeek)
@@ -701,10 +702,12 @@ namespace RatingSystem
             foreach (var team in entities.Teams.Where(t => t.Group == group))
             {
                 var oppRatings = team.HomeGames
-                    .Where(g => g.Year == settings.Year && g.Date <= settings.CurrentCutoffDate)
+                    .Where(g => g.Year == settings.Year && g.Date <= settings.CurrentCutoffDate
+                             && (g.HomeScore > 0 || g.AwayScore > 0))
                     .Select(g => g.AwayTeam)
                     .Concat(team.AwayGames
-                        .Where(g => g.Year == settings.Year && g.Date <= settings.CurrentCutoffDate)
+                        .Where(g => g.Year == settings.Year && g.Date <= settings.CurrentCutoffDate
+                                 && (g.HomeScore > 0 || g.AwayScore > 0))
                         .Select(g => g.HomeTeam))
                     .Where(o => ratingVector.ContainsKey(o.ID))
                     .Select(o => ratingVector[o.ID])
