@@ -49,6 +49,7 @@ namespace RatingSystem
 
             Console.WriteLine($"Processing {weekSettingsList.Count} weeks for {settings.Year} (weeks >= {settings.MinWeek})");
 
+            DateTime prevCutoff = DateTime.MinValue;
             foreach (var ws in weekSettingsList)
             {
                 settings.CurrentWeek = ws.Week;
@@ -56,11 +57,20 @@ namespace RatingSystem
 
                 var weekGames = allGames.Where(g => g.Date <= settings.CurrentCutoffDate).ToList();
 
+                var newGamesThisWeek = allGames.Count(g => g.Date > prevCutoff && g.Date <= settings.CurrentCutoffDate);
+                if (newGamesThisWeek == 0)
+                {
+                    Console.WriteLine($"\n  Week {ws.Week}: skipping (no new games in window {prevCutoff:yyyy-MM-dd} → {settings.CurrentCutoffDate:yyyy-MM-dd})");
+                    prevCutoff = settings.CurrentCutoffDate;
+                    continue;
+                }
+
                 if (settings.SkipUnchangedWeeks
                     && ws.ComputedGameCount.HasValue
                     && ws.ComputedGameCount.Value == weekGames.Count)
                 {
                     Console.WriteLine($"\n  Week {ws.Week}: skipping ({weekGames.Count} games, unchanged)");
+                    prevCutoff = settings.CurrentCutoffDate;
                     continue;
                 }
 
@@ -108,6 +118,7 @@ namespace RatingSystem
 
                 ws.ComputedGameCount = weekGames.Count;
                 entities.SaveChanges();
+                prevCutoff = settings.CurrentCutoffDate;
             }
         }
 

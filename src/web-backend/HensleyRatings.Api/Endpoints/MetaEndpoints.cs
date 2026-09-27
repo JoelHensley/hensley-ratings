@@ -20,10 +20,33 @@ public static class MetaEndpoints
 
         app.MapGet("/api/meta/weeks", async (int year, bool? allWeeks, CollegeFootballEntities db) =>
         {
-            IQueryable<WeekSettings> query = db.WeekSettings.Where(ws => ws.Year == year);
-            if (allWeeks != true)
-                query = query.Where(ws => db.TeamResults.Any(tr => tr.Year == year && tr.Week == ws.Week));
-            var weeks = await query.OrderBy(ws => ws.Week).ToListAsync();
+            var allWeekSettings = await db.WeekSettings
+                .Where(ws => ws.Year == year)
+                .OrderBy(ws => ws.Week)
+                .ToListAsync();
+
+            List<WeekSettings> weeks;
+            if (allWeeks == true)
+            {
+                weeks = allWeekSettings;
+            }
+            else
+            {
+                weeks = new List<WeekSettings>();
+                for (int i = 0; i < allWeekSettings.Count; i++)
+                {
+                    var ws = allWeekSettings[i];
+                    var cutoff = DateTime.Parse(ws.CutoffDate);
+                    var prevCutoff = i > 0 ? DateTime.Parse(allWeekSettings[i - 1].CutoffDate) : DateTime.MinValue;
+                    bool hasGames = await db.Games.AnyAsync(g =>
+                        g.Year == year &&
+                        (g.HomeScore > 0 || g.AwayScore > 0) &&
+                        g.Date <= cutoff &&
+                        g.Date > prevCutoff);
+                    if (hasGames)
+                        weeks.Add(ws);
+                }
+            }
 
             var options = weeks.Select((ws, i) => new WeekOption(
                 ws.Week,
