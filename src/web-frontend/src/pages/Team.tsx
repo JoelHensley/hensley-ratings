@@ -182,11 +182,21 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                     {b.ratingRank > 0 && (
                       <span className="rank-suffix" style={{ color: 'var(--muted)', fontSize: 14, marginLeft: 4 }}>(#{b.ratingRank})</span>
                     )}
+                    {b.ratingRankDelta != null && b.ratingRankDelta !== 0 && (
+                      <span className="sched-delta" style={{ fontSize: 12, marginLeft: 4, color: b.ratingRankDelta > 0 ? 'var(--up)' : 'var(--down)' }}>
+                        {b.ratingRankDelta > 0 ? '+' : ''}{b.ratingRankDelta}
+                      </span>
+                    )}
                   </span>
                   <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                     <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500 }}>{b.scheduleStrength.toFixed(3)}</span>
                     {b.scheduleStrengthRank > 0 && (
                       <span className="rank-suffix" style={{ color: 'var(--muted)', fontSize: 14, marginLeft: 4 }}>(#{b.scheduleStrengthRank})</span>
+                    )}
+                    {b.scheduleStrengthRankDelta != null && b.scheduleStrengthRankDelta !== 0 && (
+                      <span className="sched-delta" style={{ fontSize: 12, marginLeft: 4, color: b.scheduleStrengthRankDelta > 0 ? 'var(--up)' : 'var(--down)' }}>
+                        {b.scheduleStrengthRankDelta > 0 ? '+' : ''}{b.scheduleStrengthRankDelta}
+                      </span>
                     )}
                   </span>
                 </div>

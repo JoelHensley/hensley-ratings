@@ -88,8 +88,10 @@ public record ByeWeekResponse(
     int Losses,
     double Rating,
     int RatingRank,
+    int? RatingRankDelta,
     double ScheduleStrength,
-    int ScheduleStrengthRank
+    int ScheduleStrengthRank,
+    int? ScheduleStrengthRankDelta
 );
 
 public record WeekOption(int Week, string CutoffDate, bool HasPrevious);

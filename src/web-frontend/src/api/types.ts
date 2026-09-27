@@ -86,8 +86,10 @@ export interface ByeWeek {
   losses: number
   rating: number
   ratingRank: number
+  ratingRankDelta: number | null
   scheduleStrength: number
   scheduleStrengthRank: number
+  scheduleStrengthRankDelta: number | null
 }
 
 export interface WeekOption {

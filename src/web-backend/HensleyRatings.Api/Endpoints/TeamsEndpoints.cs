@@ -188,7 +188,14 @@ public static class TeamsEndpoints
                     int ratingRank = 0, schedRank2 = 0;
                     if (ratingRankByWeek.TryGetValue(w, out var rr)) rr.TryGetValue(id, out ratingRank);
                     if (schedRankByWeek.TryGetValue(w, out var sr)) sr.TryGetValue(id, out schedRank2);
-                    return new ByeWeekResponse(w, wr.Wins, wr.Losses, wr.HensleyRating, ratingRank, wr.ScheduleStrength, schedRank2);
+
+                    int? ratingDelta = null, schedDelta = null;
+                    if (ratingRankByWeek.TryGetValue(w - 1, out var prevRr) && prevRr.TryGetValue(id, out var prevRating))
+                        ratingDelta = prevRating - ratingRank;
+                    if (schedRankByWeek.TryGetValue(w - 1, out var prevSr) && prevSr.TryGetValue(id, out var prevSched))
+                        schedDelta = prevSched - schedRank2;
+
+                    return new ByeWeekResponse(w, wr.Wins, wr.Losses, wr.HensleyRating, ratingRank, ratingDelta, wr.ScheduleStrength, schedRank2, schedDelta);
                 })
                 .ToList();
 
