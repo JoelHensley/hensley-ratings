@@ -84,8 +84,8 @@ public class PredictionServiceTests
             awayPtsScored: 280, awayPtsAllowed: 280,
             isNeutralSite: true);
 
-        // LOV = 0; both formulas produce equal scores which get incremented by 1
-        Assert.True(Math.Abs(home - away) <= 1, $"Expected close game, got {home}-{away}");
+        // LOV = 0; scores are always separated by exactly 1 (never a tie)
+        Assert.Equal(1, Math.Abs(home - away));
     }
 
     [Fact]

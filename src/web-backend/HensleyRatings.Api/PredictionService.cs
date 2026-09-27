@@ -47,6 +47,7 @@ public static class PredictionService
 
         int winScore  = (int)Math.Round((w1 + w2) / 2.0);
         int loseScore = (int)Math.Round((l1 + l2) / 2.0);
+        if (winScore == loseScore) winScore++;
 
         return homeWins ? (winScore, loseScore) : (loseScore, winScore);
     }
