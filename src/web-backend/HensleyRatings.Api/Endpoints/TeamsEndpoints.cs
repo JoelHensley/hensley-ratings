@@ -98,6 +98,7 @@ public static class TeamsEndpoints
                 .ToListAsync();
 
             var weeklyRatingByWeek = teamWeeklyResults.ToDictionary(tr => tr.Week);
+            var firstRatingWeek = teamWeeklyResults.Count > 0 ? teamWeeklyResults[0].Week : int.MaxValue;
 
             // Build game log with running record
             int wins = 0, losses = 0;
@@ -136,7 +137,9 @@ public static class TeamsEndpoints
                         && ratingRanks.TryGetValue(id, out var rr))
                     {
                         teamRankAtWeek = rr;
-                        if (gameWeek.Week > 1 && ratingRankByWeek.TryGetValue(gameWeek.Week - 1, out var prevRatingRanks)
+                        var prevRatingWeek = gameWeek.Week - 1;
+                        if (prevRatingWeek > firstRatingWeek
+                            && ratingRankByWeek.TryGetValue(prevRatingWeek, out var prevRatingRanks)
                             && prevRatingRanks.TryGetValue(id, out var prevRr))
                             teamRankDelta = prevRr - rr; // positive = moved up
                     }
@@ -146,7 +149,9 @@ public static class TeamsEndpoints
                         && schedRanks.TryGetValue(id, out var sr))
                     {
                         schedRank = sr;
-                        if (gameWeek.Week > 1 && schedRankByWeek.TryGetValue(gameWeek.Week - 1, out var prevSchedRanks)
+                        var prevSchedWeek = gameWeek.Week - 1;
+                        if (prevSchedWeek > firstRatingWeek
+                            && schedRankByWeek.TryGetValue(prevSchedWeek, out var prevSchedRanks)
                             && prevSchedRanks.TryGetValue(id, out var prevSr))
                             schedRankDelta = prevSr - sr; // positive = moved up
                     }
