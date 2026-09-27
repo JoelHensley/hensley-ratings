@@ -645,10 +645,19 @@ body {
   /* Ratings table */
   .ratings-table {
     font-size: 13px;
-    min-width: 520px;
+    min-width: 340px;
   }
   .ratings-table th { font-size: 11px; padding: 8px 6px; overflow: hidden; white-space: nowrap; }
   .ratings-table td { padding: 7px 6px; }
+  /* Hide Sched Str column (col 5) — too wide for 412px */
+  .ratings-table th:nth-child(5),
+  .ratings-table td:nth-child(5) { display: none; }
+  /* Redistribute freed 15% across remaining 5 columns */
+  .ratings-table th:nth-child(1), .ratings-table td:nth-child(1) { width:  9%; }
+  .ratings-table th:nth-child(2), .ratings-table td:nth-child(2) { width: 50%; }
+  .ratings-table th:nth-child(3), .ratings-table td:nth-child(3) { width: 11%; }
+  .ratings-table th:nth-child(4), .ratings-table td:nth-child(4) { width: 16%; }
+  .ratings-table th:nth-child(6), .ratings-table td:nth-child(6) { width: 14%; }
   .rating-val { font-size: 14px; }
   .rank-num { font-size: 14px; }
   /* Hide sub-rank (overall rank in parens) — too narrow in the rank column */
@@ -676,4 +685,6 @@ body {
     min-width: 0;
   }
   .game-log-date { font-size: 13px; }
+  /* Hide (# rank) suffix in game log rating column — saves ~30px at 412px */
+  .rank-suffix { display: none; }
 }

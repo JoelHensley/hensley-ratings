@@ -178,7 +178,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                         {g.teamRating.toFixed(3)}
                       </span>
                       {g.teamRank && (
-                        <span style={{ color: 'var(--muted)', fontSize: 14, marginLeft: 4 }}>
+                        <span className="rank-suffix" style={{ color: 'var(--muted)', fontSize: 14, marginLeft: 4 }}>
                           (#{g.teamRank})
                         </span>
                       )}
