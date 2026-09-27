@@ -5,14 +5,30 @@ namespace HensleyRatings.Api.Tests;
 
 public class PredictionServiceTests
 {
+    // Helper: 10-game totals so per-game averages are whole numbers
+    private static (int predicted_home, int predicted_away) Predict(
+        double homeRating, double awayRating,
+        int? homePtsScored, int? homePtsAllowed,
+        int? awayPtsScored, int? awayPtsAllowed,
+        bool isNeutralSite = false,
+        int homeGp = 10, int awayGp = 10)
+    {
+        var result = PredictionService.Predict(
+            homeRating, awayRating,
+            homePtsScored, homePtsAllowed, homeGp,
+            awayPtsScored, awayPtsAllowed, awayGp,
+            isNeutralSite);
+        Assert.NotNull(result);
+        return result!.Value;
+    }
+
     [Fact]
     public void HigherRatedHomeTeamWins()
     {
-        var (home, away) = PredictionService.Predict(
+        var (home, away) = Predict(
             homeRating: 5.0, awayRating: 2.0,
             homePtsScored: 280, homePtsAllowed: 140,
-            awayPtsScored: 200, awayPtsAllowed: 210,
-            isNeutralSite: false);
+            awayPtsScored: 200, awayPtsAllowed: 210);
 
         Assert.True(home > away, $"Expected home ({home}) > away ({away})");
     }
@@ -20,11 +36,10 @@ public class PredictionServiceTests
     [Fact]
     public void HigherRatedAwayTeamWins()
     {
-        var (home, away) = PredictionService.Predict(
+        var (home, away) = Predict(
             homeRating: 1.0, awayRating: 6.0,
             homePtsScored: 140, homePtsAllowed: 280,
-            awayPtsScored: 350, awayPtsAllowed: 100,
-            isNeutralSite: false);
+            awayPtsScored: 350, awayPtsAllowed: 100);
 
         Assert.True(away > home, $"Expected away ({away}) > home ({home})");
     }
@@ -33,59 +48,72 @@ public class PredictionServiceTests
     public void NeutralSiteRemovesHomeFieldAdvantage()
     {
         // Home team marginally better, but not by more than HFA
-        var (homeNeutral, awayNeutral) = PredictionService.Predict(
+        var (homeNeutral, awayNeutral) = Predict(
             homeRating: 3.5, awayRating: 3.0,
             homePtsScored: 280, homePtsAllowed: 200,
             awayPtsScored: 280, awayPtsAllowed: 200,
             isNeutralSite: true);
 
-        var (homeHome, awayHome) = PredictionService.Predict(
+        var (homeHome, awayHome) = Predict(
             homeRating: 3.5, awayRating: 3.0,
             homePtsScored: 280, homePtsAllowed: 200,
             awayPtsScored: 280, awayPtsAllowed: 200,
             isNeutralSite: false);
 
-        // Home field game should result in bigger home margin
         Assert.True(homeHome - awayHome >= homeNeutral - awayNeutral);
     }
 
     [Fact]
-    public void NullPointsUseFallback()
+    public void ZeroGameCountReturnsNullPrediction()
     {
-        // Should not throw; falls back to FallbackAvgPoints = 28
-        var (home, away) = PredictionService.Predict(
+        var result = PredictionService.Predict(
             homeRating: 4.0, awayRating: 2.0,
-            homePtsScored: null, homePtsAllowed: null,
-            awayPtsScored: null, awayPtsAllowed: null,
+            homePtsScored: null, homePtsAllowed: null, homeGameCount: 0,
+            awayPtsScored: null, awayPtsAllowed: null, awayGameCount: 0,
             isNeutralSite: false);
 
-        Assert.True(home > 0);
-        Assert.True(away >= 0);
+        Assert.Null(result);
     }
 
     [Fact]
-    public void EqualRatingsNeutralSiteCloseGame()
+    public void EqualRatingsNeutralSiteProducesCloseGame()
     {
-        var (home, away) = PredictionService.Predict(
+        var (home, away) = Predict(
             homeRating: 3.0, awayRating: 3.0,
             homePtsScored: 280, homePtsAllowed: 280,
             awayPtsScored: 280, awayPtsAllowed: 280,
             isNeutralSite: true);
 
-        // LOV = 0, so losing score = winning score - 0 * sqrt(winning) = winning score → tie
-        Assert.Equal(home, away);
+        // LOV = 0; both formulas produce equal scores which get incremented by 1
+        Assert.True(Math.Abs(home - away) <= 1, $"Expected close game, got {home}-{away}");
     }
 
     [Fact]
     public void PredictedLosingScoreNeverNegative()
     {
-        // Extreme rating difference
-        var (home, away) = PredictionService.Predict(
+        var (home, away) = Predict(
             homeRating: 10.0, awayRating: -5.0,
             homePtsScored: 400, homePtsAllowed: 50,
-            awayPtsScored: 50, awayPtsAllowed: 400,
-            isNeutralSite: false);
+            awayPtsScored: 50, awayPtsAllowed: 400);
 
         Assert.True(away >= 0, $"Losing score ({away}) should not be negative");
+    }
+
+    [Fact]
+    public void BlendedScoreUsesPointsAllowed()
+    {
+        // Two teams with same pts scored but different pts allowed should yield different predictions
+        var (home1, away1) = Predict(
+            homeRating: 5.0, awayRating: 2.0,
+            homePtsScored: 280, homePtsAllowed: 100,   // tight defense
+            awayPtsScored: 200, awayPtsAllowed: 300);  // leaky defense
+
+        var (home2, away2) = Predict(
+            homeRating: 5.0, awayRating: 2.0,
+            homePtsScored: 280, homePtsAllowed: 100,
+            awayPtsScored: 200, awayPtsAllowed: 100);  // tight defense
+
+        // Leaky opponent defense means higher predicted score for home winner
+        Assert.True(home1 > home2, $"Expected higher winning score ({home1}) when opponent defense is leaky vs ({home2})");
     }
 }

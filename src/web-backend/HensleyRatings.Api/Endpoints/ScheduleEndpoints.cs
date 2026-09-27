@@ -103,15 +103,18 @@ public static class ScheduleEndpoints
                 int? predHome = null, predAway = null;
                 if (!isComplete && homeRating != null && awayRating != null)
                 {
-                    (predHome, predAway) = PredictionService.Predict(
+                    var pred = PredictionService.Predict(
                         homeRating.HensleyRating,
                         awayRating.HensleyRating,
                         homeRating.PointsScored,
                         homeRating.PointsAllowed,
+                        homeRating.Wins + homeRating.Losses,
                         awayRating.PointsScored,
                         awayRating.PointsAllowed,
+                        awayRating.Wins + awayRating.Losses,
                         g.IsNeutralSite
                     );
+                    if (pred.HasValue) (predHome, predAway) = pred.Value;
                 }
 
                 return new ScheduleGameResponse(
