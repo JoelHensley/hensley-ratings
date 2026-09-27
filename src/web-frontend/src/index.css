@@ -594,27 +594,6 @@ body {
 }
 .prediction-badge--inline .prediction-scores { font-size: 14px; }
 
-/* tooltip that pops downward (for table rows inside overflow-x scroll) */
-.prediction-tooltip--down {
-  bottom: auto;
-  top: calc(100% + 8px);
-  transform: translateX(-50%) translateY(-4px);
-}
-.prediction-tooltip--down.visible {
-  transform: translateX(-50%) translateY(0);
-}
-.prediction-tooltip--down::after {
-  top: auto;
-  bottom: 100%;
-  border-top-color: transparent;
-  border-bottom-color: var(--border);
-}
-.prediction-tooltip--down::before {
-  top: auto;
-  bottom: 100%;
-  border-top-color: transparent;
-  border-bottom-color: var(--surface);
-}
 
 .game-stats-row {
   display: grid;
@@ -685,14 +664,10 @@ body {
 .team-game-log {
   margin-top: 24px;
 }
-.game-log-scroll-outer {
+.game-log-scroll {
   overflow-x: auto;
   border-radius: 6px;
   border: 1px solid var(--border);
-}
-.game-log-scroll {
-  overflow: visible;
-  min-width: 580px;
 }
 .game-log-row {
   display: grid;
@@ -702,7 +677,7 @@ body {
   padding: 8px 10px;
   border-bottom: 1px solid var(--border);
   font-size: 16px;
-  position: relative;
+  min-width: 580px;
 }
 .game-log-row:last-child { border-bottom: none; }
 .game-log-header { background: var(--surface); }

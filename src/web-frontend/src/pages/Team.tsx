@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { ByeWeek, TeamGame } from '../api/types'
@@ -37,49 +37,14 @@ function formatDate(iso: string) {
 }
 
 function PredictionBadge({ team, opp }: { team: number; opp: number }) {
-  const [visible, setVisible] = useState(false)
   const teamWins = team > opp
-
   return (
-    <div
-      className="prediction-badge prediction-badge--inline"
-      onMouseEnter={() => setVisible(true)}
-      onMouseLeave={() => setVisible(false)}
-      onFocus={() => setVisible(true)}
-      onBlur={() => setVisible(false)}
-      tabIndex={0}
-      role="button"
-      aria-label={`Predicted score: ${team}–${opp}`}
-    >
-      <div className="prediction-eyebrow">
-        Prediction
-        <svg className="prediction-info" aria-hidden="true" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.25"/>
-          <rect x="7.25" y="7" width="1.5" height="5" rx="0.75" fill="currentColor"/>
-          <circle cx="8" cy="5" r="0.85" fill="currentColor"/>
-        </svg>
-      </div>
+    <div className="prediction-badge prediction-badge--inline" aria-label={`Predicted score: ${team}–${opp}`}>
+      <div className="prediction-eyebrow">Prediction</div>
       <div className="prediction-scores">
         <span className={teamWins ? 'pred-winner' : 'pred-loser'}>{team}</span>
         <span className="pred-sep">–</span>
         <span className={!teamWins ? 'pred-winner' : 'pred-loser'}>{opp}</span>
-      </div>
-      <div className={`prediction-tooltip prediction-tooltip--down${visible ? ' visible' : ''}`} role="tooltip">
-        <div className="pred-tip-title">How this prediction works</div>
-        <div className="pred-tip-body">
-          <div className="pred-tip-row">
-            <span className="pred-tip-bullet">◆</span>
-            <span>The Hensley Rating gap between teams sets the predicted margin.</span>
-          </div>
-          <div className="pred-tip-row">
-            <span className="pred-tip-bullet">◆</span>
-            <span>Scores are derived by blending each team's scoring average with their opponent's points-allowed average, then averaging two independent formulas.</span>
-          </div>
-          <div className="pred-tip-row">
-            <span className="pred-tip-bullet">◆</span>
-            <span>The home team receives a +1 rating advantage unless the game is at a neutral site.</span>
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -203,7 +168,6 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
       </div>
 
       <section className="team-game-log">
-        <div className="game-log-scroll-outer">
         <div className="game-log-scroll">
           <div
             className="game-log-row game-log-header"
@@ -355,7 +319,6 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
             <div className="empty">No games on record for this team.</div>
           )}
 
-        </div>
         </div>
       </section>
     </main>
