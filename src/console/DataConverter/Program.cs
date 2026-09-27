@@ -43,6 +43,7 @@ namespace DataConverter
             { "Washington MO",     "Washington U." },
             { "West Liberty",      "West Liberty St" },
             { "Western Colorado",  "Western St CO" },
+            { "St Mary-Woods",     "St Mary-of-the-Woods" },
             { "Wheeling U.",       "Wheeling Jesuit" },
         };
 
