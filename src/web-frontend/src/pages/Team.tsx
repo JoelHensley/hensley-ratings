@@ -189,7 +189,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                   ) : '—'}
                 </span>
                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {g.scheduleStrength !== null ? (
+                  {g.scheduleStrength != null ? (
                     <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500 }}>
                       {g.scheduleStrength.toFixed(3)}
                       {g.scheduleStrengthDelta !== null && g.scheduleStrengthDelta !== 0 && (
