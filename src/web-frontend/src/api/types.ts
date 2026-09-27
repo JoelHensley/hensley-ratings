@@ -86,11 +86,11 @@ export interface ByeWeek {
   week: number
   wins: number
   losses: number
-  rating: number
-  ratingRank: number
+  rating: number | null
+  ratingRank: number | null
   ratingRankDelta: number | null
-  scheduleStrength: number
-  scheduleStrengthRank: number
+  scheduleStrength: number | null
+  scheduleStrengthRank: number | null
   scheduleStrengthRankDelta: number | null
 }
 

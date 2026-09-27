@@ -88,11 +88,11 @@ public record ByeWeekResponse(
     int Week,
     int Wins,
     int Losses,
-    double Rating,
-    int RatingRank,
+    double? Rating,
+    int? RatingRank,
     int? RatingRankDelta,
-    double ScheduleStrength,
-    int ScheduleStrengthRank,
+    double? ScheduleStrength,
+    int? ScheduleStrengthRank,
     int? ScheduleStrengthRankDelta
 );
 

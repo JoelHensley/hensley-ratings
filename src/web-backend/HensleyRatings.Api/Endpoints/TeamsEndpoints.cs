@@ -199,7 +199,7 @@ public static class TeamsEndpoints
                 );
             }).ToList();
 
-            // Weeks that have ratings but no game — bye weeks
+            // Weeks that have ratings but no game — rated bye weeks
             var gameWeekNumbers = gameLog.Where(g => g.WeekNumber.HasValue).Select(g => g.WeekNumber!.Value).ToHashSet();
             var byeWeeks = weeklyRatingByWeek.Keys
                 .Where(w => !gameWeekNumbers.Contains(w))
@@ -220,6 +220,33 @@ public static class TeamsEndpoints
                     return new ByeWeekResponse(w, wr.Wins, wr.Losses, wr.HensleyRating, ratingRank, ratingDelta, wr.ScheduleStrength, schedRank2, schedDelta);
                 })
                 .ToList();
+
+            // Also detect future bye weeks: schedule gaps with no ratings yet
+            var firstGameWeek = gameWeekNumbers.Count > 0 ? gameWeekNumbers.Min() : (int?)null;
+            var lastGameWeek  = gameWeekNumbers.Count > 0 ? gameWeekNumbers.Max() : (int?)null;
+            if (firstGameWeek.HasValue && lastGameWeek.HasValue)
+            {
+                var ratedByeWeekNumbers = byeWeeks.Select(b => b.Week).ToHashSet();
+                var futureByeWeeks = weekSettings
+                    .Where(ws => ws.Week > firstGameWeek.Value
+                              && ws.Week <= lastGameWeek.Value
+                              && !gameWeekNumbers.Contains(ws.Week)
+                              && !weeklyRatingByWeek.ContainsKey(ws.Week)
+                              && !ratedByeWeekNumbers.Contains(ws.Week))
+                    .Select(ws =>
+                    {
+                        // Record up to (but not including) this bye week
+                        var lastGameBefore = gameLog
+                            .Where(g => g.WeekNumber.HasValue && g.WeekNumber < ws.Week)
+                            .LastOrDefault();
+                        int w = lastGameBefore?.RunningWins ?? 0;
+                        int l = lastGameBefore?.RunningLosses ?? 0;
+                        return new ByeWeekResponse(ws.Week, w, l, null, null, null, null, null, null);
+                    })
+                    .ToList();
+
+                byeWeeks = byeWeeks.Concat(futureByeWeeks).OrderBy(b => b.Week).ToList();
+            }
 
             var response = new TeamDetailResponse(
                 id,
