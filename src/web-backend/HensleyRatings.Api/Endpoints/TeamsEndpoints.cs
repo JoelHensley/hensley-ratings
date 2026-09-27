@@ -23,16 +23,37 @@ public static class TeamsEndpoints
 
             var week = latestResult.Week;
 
-            // Overall rank
-            var allResults = await db.TeamResults
-                .Where(tr => tr.Year == year && tr.Week == week)
-                .OrderByDescending(tr => tr.HensleyRating)
+            // All results for the year across all weeks — used for per-week ranking
+            var allYearlyResults = await db.TeamResults
+                .Where(tr => tr.Year == year)
                 .ToListAsync();
+
+            var allResults = allYearlyResults
+                .Where(tr => tr.Week == week)
+                .OrderByDescending(tr => tr.HensleyRating)
+                .ToList();
 
             var overallRank = allResults
                 .Select((r, i) => (r.TeamID, Rank: i + 1))
                 .ToDictionary(x => x.TeamID, x => x.Rank);
             overallRank.TryGetValue(id, out var teamRank);
+
+            // Per-week rating rank and schedule strength rank (for game log deltas)
+            var ratingRankByWeek = allYearlyResults
+                .GroupBy(tr => tr.Week)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(r => r.HensleyRating)
+                          .Select((r, i) => (r.TeamID, Rank: i + 1))
+                          .ToDictionary(x => x.TeamID, x => x.Rank));
+
+            var schedRankByWeek = allYearlyResults
+                .GroupBy(tr => tr.Week)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(r => r.ScheduleStrength)
+                          .Select((r, i) => (r.TeamID, Rank: i + 1))
+                          .ToDictionary(x => x.TeamID, x => x.Rank));
 
             // Affiliation
             var aff = await db.TeamAffiliations
@@ -102,19 +123,27 @@ public static class TeamsEndpoints
                 double? teamRatingAtWeek = null;
                 int? teamRankAtWeek = null;
                 double? schedStrength = null;
-                double? schedStrengthDelta = null;
+                int? schedRank = null;
+                int? schedRankDelta = null;
                 if (gameWeek != null && weeklyRatingByWeek.TryGetValue(gameWeek.Week, out var wr))
                 {
                     teamRatingAtWeek = wr.HensleyRating;
                     schedStrength = wr.ScheduleStrength;
-                    // Compute rank for that week
-                    teamRankAtWeek = allResults
-                        .OrderByDescending(r => r.HensleyRating)
-                        .TakeWhile(r => r.TeamID != id)
-                        .Count() + 1;
 
-                    if (gameWeek.Week > 1 && weeklyRatingByWeek.TryGetValue(gameWeek.Week - 1, out var prevWr))
-                        schedStrengthDelta = wr.ScheduleStrength - prevWr.ScheduleStrength;
+                    // Per-week rating rank
+                    if (ratingRankByWeek.TryGetValue(gameWeek.Week, out var ratingRanks)
+                        && ratingRanks.TryGetValue(id, out var rr))
+                        teamRankAtWeek = rr;
+
+                    // Per-week schedule strength rank and rank delta
+                    if (schedRankByWeek.TryGetValue(gameWeek.Week, out var schedRanks)
+                        && schedRanks.TryGetValue(id, out var sr))
+                    {
+                        schedRank = sr;
+                        if (gameWeek.Week > 1 && schedRankByWeek.TryGetValue(gameWeek.Week - 1, out var prevSchedRanks)
+                            && prevSchedRanks.TryGetValue(id, out var prevSr))
+                            schedRankDelta = prevSr - sr; // positive = moved up
+                    }
                 }
 
                 oppRankByTeam.TryGetValue(opponentId, out var oppRank);
@@ -135,7 +164,8 @@ public static class TeamsEndpoints
                     teamRatingAtWeek,
                     teamRankAtWeek,
                     schedStrength,
-                    schedStrengthDelta
+                    schedRank,
+                    schedRankDelta
                 );
             }).ToList();
 

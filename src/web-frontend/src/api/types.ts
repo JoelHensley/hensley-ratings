@@ -56,7 +56,8 @@ export interface TeamGame {
   teamRating: number | null
   teamRank: number | null
   scheduleStrength: number | null
-  scheduleStrengthDelta: number | null
+  scheduleStrengthRank: number | null
+  scheduleStrengthRankDelta: number | null
 }
 
 export interface TeamDetail {

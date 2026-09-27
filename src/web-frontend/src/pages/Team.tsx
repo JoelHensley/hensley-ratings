@@ -192,16 +192,21 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                   {g.scheduleStrength != null ? (
                     <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500 }}>
                       {g.scheduleStrength.toFixed(3)}
-                      {g.scheduleStrengthDelta !== null && g.scheduleStrengthDelta !== 0 && (
+                      {g.scheduleStrengthRank && (
+                        <span className="rank-suffix" style={{ color: 'var(--muted)', fontSize: 14, marginLeft: 4 }}>
+                          (#{g.scheduleStrengthRank})
+                        </span>
+                      )}
+                      {g.scheduleStrengthRankDelta != null && g.scheduleStrengthRankDelta !== 0 && (
                         <span
                           className="sched-delta"
                           style={{
                             fontSize: 12,
                             marginLeft: 4,
-                            color: g.scheduleStrengthDelta > 0 ? 'var(--up)' : 'var(--down)',
+                            color: g.scheduleStrengthRankDelta > 0 ? 'var(--up)' : 'var(--down)',
                           }}
                         >
-                          {g.scheduleStrengthDelta > 0 ? '+' : ''}{g.scheduleStrengthDelta.toFixed(3)}
+                          {g.scheduleStrengthRankDelta > 0 ? '+' : ''}{g.scheduleStrengthRankDelta}
                         </span>
                       )}
                     </span>
