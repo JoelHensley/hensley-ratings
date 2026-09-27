@@ -77,7 +77,17 @@ export interface TeamDetail {
   pointsScored: number | null
   pointsAllowed: number | null
   games: TeamGame[]
-  byeWeeks: number[]
+  byeWeeks: ByeWeek[]
+}
+
+export interface ByeWeek {
+  week: number
+  wins: number
+  losses: number
+  rating: number
+  ratingRank: number
+  scheduleStrength: number
+  scheduleStrengthRank: number
 }
 
 export interface WeekOption {

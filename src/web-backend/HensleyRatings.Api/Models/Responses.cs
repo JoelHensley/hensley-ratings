@@ -79,7 +79,17 @@ public record TeamDetailResponse(
     int? PointsScored,
     int? PointsAllowed,
     IEnumerable<TeamGameResponse> Games,
-    IEnumerable<int> ByeWeeks
+    IEnumerable<ByeWeekResponse> ByeWeeks
+);
+
+public record ByeWeekResponse(
+    int Week,
+    int Wins,
+    int Losses,
+    double Rating,
+    int RatingRank,
+    double ScheduleStrength,
+    int ScheduleStrengthRank
 );
 
 public record WeekOption(int Week, string CutoffDate, bool HasPrevious);

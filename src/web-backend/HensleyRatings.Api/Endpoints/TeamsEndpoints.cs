@@ -187,6 +187,14 @@ public static class TeamsEndpoints
             var byeWeeks = weeklyRatingByWeek.Keys
                 .Where(w => !gameWeekNumbers.Contains(w))
                 .OrderBy(w => w)
+                .Select(w =>
+                {
+                    var wr = weeklyRatingByWeek[w];
+                    int ratingRank = 0, schedRank2 = 0;
+                    if (ratingRankByWeek.TryGetValue(w, out var rr)) rr.TryGetValue(id, out ratingRank);
+                    if (schedRankByWeek.TryGetValue(w, out var sr)) sr.TryGetValue(id, out schedRank2);
+                    return new ByeWeekResponse(w, wr.Wins, wr.Losses, wr.HensleyRating, ratingRank, wr.ScheduleStrength, schedRank2);
+                })
                 .ToList();
 
             var response = new TeamDetailResponse(

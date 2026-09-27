@@ -2,25 +2,25 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
-import type { TeamGame } from '../api/types'
+import type { ByeWeek, TeamGame } from '../api/types'
 import { XLogo } from '../components/XLogo'
 import { YearPicker } from '../components/YearPicker'
 import { buildRatingsPath, buildTeamPath } from '../util/paths'
 import { slugify } from '../util/slugify'
 
-type LogEntry = { kind: 'game'; game: TeamGame } | { kind: 'bye'; week: number }
+type LogEntry = { kind: 'game'; game: TeamGame } | { kind: 'bye'; bye: ByeWeek }
 
-function buildMergedLog(games: TeamGame[], byeWeeks: number[]): LogEntry[] {
+function buildMergedLog(games: TeamGame[], byeWeeks: ByeWeek[]): LogEntry[] {
   const result: LogEntry[] = []
-  const sortedByes = [...byeWeeks].sort((a, b) => a - b)
+  const sortedByes = [...byeWeeks].sort((a, b) => a.week - b.week)
   let byeIdx = 0
   for (const game of games) {
-    while (byeIdx < sortedByes.length && (game.weekNumber == null || sortedByes[byeIdx] < game.weekNumber)) {
-      result.push({ kind: 'bye', week: sortedByes[byeIdx++] })
+    while (byeIdx < sortedByes.length && (game.weekNumber == null || sortedByes[byeIdx].week < game.weekNumber)) {
+      result.push({ kind: 'bye', bye: sortedByes[byeIdx++] })
     }
     result.push({ kind: 'game', game })
   }
-  while (byeIdx < sortedByes.length) result.push({ kind: 'bye', week: sortedByes[byeIdx++] })
+  while (byeIdx < sortedByes.length) result.push({ kind: 'bye', bye: sortedByes[byeIdx++] })
   return result
 }
 
@@ -166,9 +166,29 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
           </div>
           {mergedLog.map((entry) => {
             if (entry.kind === 'bye') {
+              const b = entry.bye
               return (
-                <div key={`bye-${entry.week}`} className="game-log-bye">
-                  BYE WEEK
+                <div key={`bye-${b.week}`} className="game-log-row game-log-bye-row">
+                  <span />
+                  <span style={{ color: 'var(--muted)', fontFamily: 'var(--font-display)', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    Bye Week
+                  </span>
+                  <span />
+                  <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+                    {b.wins}–{b.losses}
+                  </span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500 }}>{b.rating.toFixed(3)}</span>
+                    {b.ratingRank > 0 && (
+                      <span className="rank-suffix" style={{ color: 'var(--muted)', fontSize: 14, marginLeft: 4 }}>(#{b.ratingRank})</span>
+                    )}
+                  </span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500 }}>{b.scheduleStrength.toFixed(3)}</span>
+                    {b.scheduleStrengthRank > 0 && (
+                      <span className="rank-suffix" style={{ color: 'var(--muted)', fontSize: 14, marginLeft: 4 }}>(#{b.scheduleStrengthRank})</span>
+                    )}
+                  </span>
                 </div>
               )
             }
