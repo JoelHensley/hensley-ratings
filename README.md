@@ -82,7 +82,9 @@ Copy `src/console/.env.example` to `src/console/.env` and set:
 |---|---|
 | `RATINGS_OUTPUT_DIR` | Folder where weekly output is archived |
 | `TEAMS_DATA_FILE` | Path to the current season's teams CSV |
-| `PREVIOUS_TEAMS_DATA_FILE` | Path to the previous season's teams CSV (used by TeamsParser) |
+| `PREVIOUS_TEAMS_DATA_FILE` | Path to the previous season's teams CSV (used by TeamsParser for match validation) |
+| `SEASON_YEAR` | Four-digit year for the current season (used by TeamsParser `--persist` and the ratings pipeline) |
+| `DB_PATH` | Path to the SQLite database (used by TeamsParser `--persist` and the ratings pipeline) |
 
 ### 3. Populate `src/console/BuildFiles/`
 
@@ -100,6 +102,22 @@ The `BuildFiles/` directory is not tracked by git. You need to supply:
 ```
 
 This parses `raw-teams.txt` against the previous season's teams CSV and writes `BuildFiles/teams.csv`. Teams not found in the previous year are printed to stdout for review.
+
+#### Persist to the database
+
+Pass `--persist` to also write the parsed teams into the SQLite database. The persister finds or creates each Division, Conference, and Team, then writes `ConferenceAffiliation` and `TeamAffiliation` rows for the target year. Running with `--persist` is idempotent — rows that already exist for the year are skipped.
+
+```bash
+./src/console/parse-teams.sh --persist
+```
+
+Requires `SEASON_YEAR` and `DB_PATH` to be set in `.env` (see the full variable table below).
+
+Output at the end of the run summarises what was added:
+
+```
+DB persist (2026): +0 divisions, +3 conferences, +7 teams, +854 affiliations
+```
 
 ### 5. Run the ratings pipeline
 
@@ -224,7 +242,7 @@ All source lives under `src/console/`.
 
 | Project | Type | Description |
 |---|---|---|
-| `TeamsParser` | Console | Parses `raw-teams.txt` into `teams.csv`; validates against prior season |
+| `TeamsParser` | Console | Parses `raw-teams.txt` into `teams.csv`; validates against prior season; `--persist` writes teams and affiliations to the DB |
 | `DataConverter` | Console | Converts `raw-games.txt` to `converted-games.csv` |
 | `DatabaseImport` | Console | Imports teams and games into SQLite; computes connectivity groups |
 | `DatabaseLayer` | Library | EF Core data access layer (SQLite); shared by all projects |

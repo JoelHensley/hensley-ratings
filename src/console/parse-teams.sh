@@ -17,4 +17,4 @@ if [[ -z "$PREVIOUS_TEAMS_DATA_FILE" ]]; then
 fi
 
 cd "$CONSOLE_DIR"
-dotnet run --project TeamsParser
+dotnet run --project TeamsParser -- "$@"

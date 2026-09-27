@@ -4,6 +4,7 @@ class Program
 {
     static void Main(string[] args)
     {
+        bool persist = args.Contains("--persist");
         var settings = new ParserSettings();
 
         if (!File.Exists(settings.RawTeamsFileName))
@@ -74,6 +75,12 @@ class Program
             Console.WriteLine("=== UNKNOWN (not found anywhere in previous year) ===");
             foreach (var entry in unmatched.OrderBy(e => e.Division).ThenBy(e => e.Conference).ThenBy(e => e.Team))
                 Console.WriteLine($"  {entry.Division},{entry.Conference},{entry.Team}");
+        }
+
+        if (persist)
+        {
+            Console.WriteLine();
+            new DbPersister(settings.SeasonYear).Persist(entries);
         }
     }
 }
