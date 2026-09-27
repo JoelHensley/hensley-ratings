@@ -9,7 +9,7 @@ import { buildSchedulePath } from '../util/paths'
 import { parseRatingsPath } from '../util/parseRatingsPath'
 import { slugify } from '../util/slugify'
 
-const DIV_ABBREV: Record<string, string> = { 'Division-II': 'D-II', 'Division-III': 'D-III' }
+const DIV_ABBREV: Record<string, string> = { 'Division-II': 'D-II', 'Division-III': 'D-III', 'NCAA Division II': 'D-II', 'NCAA Division III': 'D-III' }
 const shortDivName = (name: string) => DIV_ABBREV[name] ?? name
 
 function formatDate(iso: string) {

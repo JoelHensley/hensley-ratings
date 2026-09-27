@@ -13,6 +13,8 @@ import Team from './Team'
 const DIV_ABBREV: Record<string, string> = {
   'Division-II': 'D-II',
   'Division-III': 'D-III',
+  'NCAA Division II': 'D-II',
+  'NCAA Division III': 'D-III',
 }
 const shortDivName = (name: string) => DIV_ABBREV[name] ?? name
 
@@ -264,7 +266,7 @@ function RatingsView({
                   className={sort.key === 'wins' ? 'sorted' : ''}
                   onClick={() => toggleSort('wins')}
                 >
-                  Rec{sortArrow('wins')}
+                  <span className="desktop-label">Record</span><span className="mobile-label">Rec</span>{sortArrow('wins')}
                 </th>
                 <th
                   className={sort.key === 'hensleyRating' ? 'sorted' : ''}
@@ -276,7 +278,7 @@ function RatingsView({
                   className={sort.key === 'scheduleStrength' ? 'sorted' : ''}
                   onClick={() => toggleSort('scheduleStrength')}
                 >
-                  Sch Str{sortArrow('scheduleStrength')}
+                  <span className="desktop-label">Schedule Strength</span><span className="mobile-label">Sch Str</span>{sortArrow('scheduleStrength')}
                 </th>
                 <th
                   className={sort.key === 'weekOverWeekChange' ? 'sorted' : ''}

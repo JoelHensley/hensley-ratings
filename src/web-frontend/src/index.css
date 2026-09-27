@@ -644,7 +644,12 @@ body {
 .footer-sep { color: var(--border); }
 
 /* ─── Responsive ─────────────────────────────────────────────────────── */
+.mobile-label { display: none; }
+
 @media (max-width: 600px) {
+  .desktop-label { display: none; }
+  .mobile-label { display: inline; }
+
   /* Compact nav so brand + 3 links fit on narrow phones */
   .nav-inner { padding-inline: 12px; }
   .nav-brand { margin-right: 12px; font-size: 16px; }

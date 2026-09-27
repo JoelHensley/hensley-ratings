@@ -212,7 +212,12 @@ namespace DataImport
                     continue;
                 }
 
-                string divisionName = row[0];
+                string divisionName = row[0] switch
+                {
+                    "NCAA Division II" => "Division-II",
+                    "NCAA Division III" => "Division-III",
+                    var s => s
+                };
                 string conferenceName = row[1];
                 string teamName = row[2];
 

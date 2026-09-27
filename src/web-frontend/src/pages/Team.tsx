@@ -27,6 +27,8 @@ function buildMergedLog(games: TeamGame[], byeWeeks: ByeWeek[]): LogEntry[] {
 const DIV_ABBREV: Record<string, string> = {
   'Division-II': 'D-II',
   'Division-III': 'D-III',
+  'NCAA Division II': 'D-II',
+  'NCAA Division III': 'D-III',
 }
 const shortDivName = (name: string) => DIV_ABBREV[name] ?? name
 
