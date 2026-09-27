@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { ScheduleGame } from '../api/types'
+import { XLogo } from '../components/XLogo'
 import { YearPicker } from '../components/YearPicker'
 import { buildSchedulePath } from '../util/paths'
 import { parseRatingsPath } from '../util/parseRatingsPath'
@@ -101,7 +102,7 @@ export default function Schedule() {
       <h1 className="page-heading">
         Schedule &amp; Results{activeWeek > 0 && ` — Week ${activeWeek}`}
       </h1>
-      <a href="https://x.com/HensleyRatings" target="_blank" rel="noopener noreferrer" className="page-x-link">@HensleyRatings</a>
+      <a href="https://x.com/HensleyRatings" target="_blank" rel="noopener noreferrer" className="page-x-link"><XLogo />@HensleyRatings</a>
 
       {/* Year picker */}
       {yearsData && yearsData.years.length > 0 && (

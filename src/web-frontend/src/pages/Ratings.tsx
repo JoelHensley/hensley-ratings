@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { RatedTeam } from '../api/types'
 import { YearPicker } from '../components/YearPicker'
+import { XLogo } from '../components/XLogo'
 import { buildRatingsPath, buildTeamPath } from '../util/paths'
 import { parseRatingsPath } from '../util/parseRatingsPath'
 import { slugify } from '../util/slugify'
@@ -156,7 +157,7 @@ function RatingsView({
       <h1 className="page-heading">
         {headingLabel}{activeWeek > 0 && ` — Week ${activeWeek}`}
       </h1>
-      <a href="https://x.com/HensleyRatings" target="_blank" rel="noopener noreferrer" className="page-x-link">@HensleyRatings</a>
+      <a href="https://x.com/HensleyRatings" target="_blank" rel="noopener noreferrer" className="page-x-link"><XLogo />@HensleyRatings</a>
 
       {/* Year picker */}
       {yearsData && yearsData.years.length > 0 && (

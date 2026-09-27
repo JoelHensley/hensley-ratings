@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
+import { XLogo } from '../components/XLogo'
 import { YearPicker } from '../components/YearPicker'
 import { buildRatingsPath, buildTeamPath } from '../util/paths'
 import { slugify } from '../util/slugify'
@@ -88,7 +89,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
       <div className="team-header">
         <div>
           <h1 className="team-name">{team.name}</h1>
-          <a href="https://x.com/HensleyRatings" target="_blank" rel="noopener noreferrer" className="page-x-link">@HensleyRatings</a>
+          <a href="https://x.com/HensleyRatings" target="_blank" rel="noopener noreferrer" className="page-x-link"><XLogo />@HensleyRatings</a>
         </div>
 
         <div className="team-stat-row">

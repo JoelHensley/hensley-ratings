@@ -149,7 +149,9 @@ body {
 
 /* ─── X / Twitter link below page heading ───────────────────────────── */
 .page-x-link {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--font-display);
   font-size: 13px;
   letter-spacing: 0.04em;
