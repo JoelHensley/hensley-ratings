@@ -27,16 +27,6 @@ export default function App() {
           </div>
         </div>
       </nav>
-      <div className="sub-header">
-        <a
-          href="https://x.com/HensleyRatings"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="footer-x-link"
-        >
-          @HensleyRatings
-        </a>
-      </div>
       <Routes>
         <Route path="/" element={<Navigate to="/ratings" replace />} />
 

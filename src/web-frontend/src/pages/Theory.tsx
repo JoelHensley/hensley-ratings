@@ -6,6 +6,7 @@ export default function Theory() {
   return (
     <main className="page">
       <h1 className="page-heading">Theory</h1>
+      <a href="https://x.com/HensleyRatings" target="_blank" rel="noopener noreferrer" className="page-x-link">@HensleyRatings</a>
       <div className="theory-content">
         <p>
           This rating system was created for my graduate project at North Dakota State University. It takes into

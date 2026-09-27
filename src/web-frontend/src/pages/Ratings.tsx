@@ -156,6 +156,7 @@ function RatingsView({
       <h1 className="page-heading">
         {headingLabel}{activeWeek > 0 && ` — Week ${activeWeek}`}
       </h1>
+      <a href="https://x.com/HensleyRatings" target="_blank" rel="noopener noreferrer" className="page-x-link">@HensleyRatings</a>
 
       {/* Year picker */}
       {yearsData && yearsData.years.length > 0 && (

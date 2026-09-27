@@ -88,6 +88,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
       <div className="team-header">
         <div>
           <h1 className="team-name">{team.name}</h1>
+          <a href="https://x.com/HensleyRatings" target="_blank" rel="noopener noreferrer" className="page-x-link">@HensleyRatings</a>
         </div>
 
         <div className="team-stat-row">
