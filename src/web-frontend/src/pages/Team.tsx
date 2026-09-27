@@ -139,6 +139,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
             <span>Result</span>
             <span>Record</span>
             <span>Rating</span>
+            <span>Sch Str</span>
           </div>
           {team.games.map((g) => {
             const isWin = g.isWin
@@ -185,6 +186,25 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                         </span>
                       )}
                     </>
+                  ) : '—'}
+                </span>
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {g.scheduleStrength !== null ? (
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500 }}>
+                      {g.scheduleStrength.toFixed(3)}
+                      {g.scheduleStrengthDelta !== null && g.scheduleStrengthDelta !== 0 && (
+                        <span
+                          className="sched-delta"
+                          style={{
+                            fontSize: 12,
+                            marginLeft: 4,
+                            color: g.scheduleStrengthDelta > 0 ? 'var(--up)' : 'var(--down)',
+                          }}
+                        >
+                          {g.scheduleStrengthDelta > 0 ? '+' : ''}{g.scheduleStrengthDelta.toFixed(3)}
+                        </span>
+                      )}
+                    </span>
                   ) : '—'}
                 </span>
               </div>

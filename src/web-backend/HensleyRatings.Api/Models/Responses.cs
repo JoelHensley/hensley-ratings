@@ -56,7 +56,9 @@ public record TeamGameResponse(
     int RunningWins,
     int RunningLosses,
     double? TeamRating,
-    int? TeamRank
+    int? TeamRank,
+    double? ScheduleStrength,
+    double? ScheduleStrengthDelta
 );
 
 public record TeamDetailResponse(

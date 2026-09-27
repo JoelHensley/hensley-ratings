@@ -101,14 +101,20 @@ public static class TeamsEndpoints
 
                 double? teamRatingAtWeek = null;
                 int? teamRankAtWeek = null;
+                double? schedStrength = null;
+                double? schedStrengthDelta = null;
                 if (gameWeek != null && weeklyRatingByWeek.TryGetValue(gameWeek.Week, out var wr))
                 {
                     teamRatingAtWeek = wr.HensleyRating;
+                    schedStrength = wr.ScheduleStrength;
                     // Compute rank for that week
                     teamRankAtWeek = allResults
                         .OrderByDescending(r => r.HensleyRating)
                         .TakeWhile(r => r.TeamID != id)
                         .Count() + 1;
+
+                    if (gameWeek.Week > 1 && weeklyRatingByWeek.TryGetValue(gameWeek.Week - 1, out var prevWr))
+                        schedStrengthDelta = wr.ScheduleStrength - prevWr.ScheduleStrength;
                 }
 
                 oppRankByTeam.TryGetValue(opponentId, out var oppRank);
@@ -127,7 +133,9 @@ public static class TeamsEndpoints
                     wins,
                     losses,
                     teamRatingAtWeek,
-                    teamRankAtWeek
+                    teamRankAtWeek,
+                    schedStrength,
+                    schedStrengthDelta
                 );
             }).ToList();
 
