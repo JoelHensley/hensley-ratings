@@ -185,6 +185,18 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                           (#{g.teamRank})
                         </span>
                       )}
+                      {g.teamRankDelta != null && g.teamRankDelta !== 0 && (
+                        <span
+                          className="sched-delta"
+                          style={{
+                            fontSize: 12,
+                            marginLeft: 4,
+                            color: g.teamRankDelta > 0 ? 'var(--up)' : 'var(--down)',
+                          }}
+                        >
+                          {g.teamRankDelta > 0 ? '+' : ''}{g.teamRankDelta}
+                        </span>
+                      )}
                     </>
                   ) : '—'}
                 </span>

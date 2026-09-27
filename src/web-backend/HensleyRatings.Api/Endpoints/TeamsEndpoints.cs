@@ -122,6 +122,7 @@ public static class TeamsEndpoints
 
                 double? teamRatingAtWeek = null;
                 int? teamRankAtWeek = null;
+                int? teamRankDelta = null;
                 double? schedStrength = null;
                 int? schedRank = null;
                 int? schedRankDelta = null;
@@ -130,10 +131,15 @@ public static class TeamsEndpoints
                     teamRatingAtWeek = wr.HensleyRating;
                     schedStrength = wr.ScheduleStrength;
 
-                    // Per-week rating rank
+                    // Per-week rating rank and rank delta
                     if (ratingRankByWeek.TryGetValue(gameWeek.Week, out var ratingRanks)
                         && ratingRanks.TryGetValue(id, out var rr))
+                    {
                         teamRankAtWeek = rr;
+                        if (gameWeek.Week > 1 && ratingRankByWeek.TryGetValue(gameWeek.Week - 1, out var prevRatingRanks)
+                            && prevRatingRanks.TryGetValue(id, out var prevRr))
+                            teamRankDelta = prevRr - rr; // positive = moved up
+                    }
 
                     // Per-week schedule strength rank and rank delta
                     if (schedRankByWeek.TryGetValue(gameWeek.Week, out var schedRanks)
@@ -163,6 +169,7 @@ public static class TeamsEndpoints
                     losses,
                     teamRatingAtWeek,
                     teamRankAtWeek,
+                    teamRankDelta,
                     schedStrength,
                     schedRank,
                     schedRankDelta

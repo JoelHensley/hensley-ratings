@@ -57,6 +57,7 @@ public record TeamGameResponse(
     int RunningLosses,
     double? TeamRating,
     int? TeamRank,
+    int? TeamRankDelta,
     double? ScheduleStrength,
     int? ScheduleStrengthRank,
     int? ScheduleStrengthRankDelta
