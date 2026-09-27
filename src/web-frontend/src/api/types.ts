@@ -60,6 +60,8 @@ export interface TeamGame {
   scheduleStrengthRank: number | null
   scheduleStrengthRankDelta: number | null
   weekNumber: number | null
+  predictedTeamScore: number | null
+  predictedOpponentScore: number | null
 }
 
 export interface TeamDetail {

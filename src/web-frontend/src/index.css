@@ -586,6 +586,36 @@ body {
   margin-top: 3px;
   flex-shrink: 0;
 }
+
+/* inline variant (game log table) */
+.prediction-badge--inline {
+  margin-top: 0;
+  padding: 2px 7px 3px;
+}
+.prediction-badge--inline .prediction-scores { font-size: 14px; }
+
+/* tooltip that pops downward (for table rows inside overflow-x scroll) */
+.prediction-tooltip--down {
+  bottom: auto;
+  top: calc(100% + 8px);
+  transform: translateX(-50%) translateY(-4px);
+}
+.prediction-tooltip--down.visible {
+  transform: translateX(-50%) translateY(0);
+}
+.prediction-tooltip--down::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--border);
+}
+.prediction-tooltip--down::before {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--surface);
+}
+
 .game-stats-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -655,20 +685,24 @@ body {
 .team-game-log {
   margin-top: 24px;
 }
-.game-log-scroll {
+.game-log-scroll-outer {
   overflow-x: auto;
   border-radius: 6px;
   border: 1px solid var(--border);
 }
+.game-log-scroll {
+  overflow: visible;
+  min-width: 580px;
+}
 .game-log-row {
   display: grid;
-  grid-template-columns: 80px 1fr 96px 60px 110px 110px;
+  grid-template-columns: 80px 1fr 130px 60px 110px 110px;
   gap: 8px;
   align-items: center;
   padding: 8px 10px;
   border-bottom: 1px solid var(--border);
   font-size: 16px;
-  min-width: 560px;
+  position: relative;
 }
 .game-log-row:last-child { border-bottom: none; }
 .game-log-header { background: var(--surface); }

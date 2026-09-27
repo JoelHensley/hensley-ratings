@@ -154,6 +154,26 @@ public static class TeamsEndpoints
 
                 oppRankByTeam.TryGetValue(opponentId, out var oppRank);
 
+                int? predTeamScore = null, predOppScore = null;
+                if (!isComplete && ratingsByTeamId.TryGetValue(opponentId, out var oppRating))
+                {
+                    double homeRating = isHome ? latestResult.HensleyRating : oppRating.HensleyRating;
+                    double awayRating = isHome ? oppRating.HensleyRating : latestResult.HensleyRating;
+                    int? homePtsScored  = isHome ? latestResult.PointsScored  : oppRating.PointsScored;
+                    int? homePtsAllowed = isHome ? latestResult.PointsAllowed : oppRating.PointsAllowed;
+                    int  homeGp         = isHome ? latestResult.Wins + latestResult.Losses : oppRating.Wins + oppRating.Losses;
+                    int? awayPtsScored  = isHome ? oppRating.PointsScored  : latestResult.PointsScored;
+                    int? awayPtsAllowed = isHome ? oppRating.PointsAllowed : latestResult.PointsAllowed;
+                    int  awayGp         = isHome ? oppRating.Wins + oppRating.Losses : latestResult.Wins + latestResult.Losses;
+
+                    var pred = PredictionService.Predict(homeRating, awayRating, homePtsScored, homePtsAllowed, homeGp, awayPtsScored, awayPtsAllowed, awayGp, g.IsNeutralSite);
+                    if (pred.HasValue)
+                    {
+                        predTeamScore = isHome ? pred.Value.predicted_home : pred.Value.predicted_away;
+                        predOppScore  = isHome ? pred.Value.predicted_away : pred.Value.predicted_home;
+                    }
+                }
+
                 return new TeamGameResponse(
                     g.ID,
                     g.Date.ToString("yyyy-MM-dd"),
@@ -173,7 +193,9 @@ public static class TeamsEndpoints
                     schedStrength,
                     schedRank,
                     schedRankDelta,
-                    gameWeek?.Week
+                    gameWeek?.Week,
+                    predTeamScore,
+                    predOppScore
                 );
             }).ToList();
 

@@ -61,7 +61,9 @@ public record TeamGameResponse(
     double? ScheduleStrength,
     int? ScheduleStrengthRank,
     int? ScheduleStrengthRankDelta,
-    int? WeekNumber
+    int? WeekNumber,
+    int? PredictedTeamScore,
+    int? PredictedOpponentScore
 );
 
 public record TeamDetailResponse(
