@@ -128,6 +128,29 @@ namespace DatabaseLayer
             modelBuilder.Entity<WeekSettings>()
                 .HasIndex(ws => new { ws.Year, ws.Week })
                 .IsUnique();
+
+            // TeamResult: (Year, Week) for bulk week-based API queries (ratings, schedule, rankings)
+            modelBuilder.Entity<TeamResult>()
+                .HasIndex(tr => new { tr.Year, tr.Week });
+
+            // Game: (Year, Date) for schedule date-range queries
+            modelBuilder.Entity<Game>()
+                .HasIndex(g => new { g.Year, g.Date });
+
+            // Game: compound FK+Year indexes for per-team game log lookups
+            modelBuilder.Entity<Game>()
+                .HasIndex(g => new { g.HomeTeamID, g.Year });
+
+            modelBuilder.Entity<Game>()
+                .HasIndex(g => new { g.AwayTeamID, g.Year });
+
+            // ConferenceAffiliation: (Year, DivisionID) for division-filtered queries
+            modelBuilder.Entity<ConferenceAffiliation>()
+                .HasIndex(ca => new { ca.Year, ca.DivisionID });
+
+            // TeamAffiliation: (Year, ConferenceID) for year-leading affiliation lookups
+            modelBuilder.Entity<TeamAffiliation>()
+                .HasIndex(ta => new { ta.Year, ta.ConferenceID });
         }
     }
 }
