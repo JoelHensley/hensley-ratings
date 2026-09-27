@@ -647,14 +647,14 @@ body {
     font-size: 13px;
     min-width: 340px;
   }
-  .ratings-table th { font-size: 11px; padding: 8px 6px; overflow: hidden; white-space: nowrap; }
-  .ratings-table td { padding: 7px 6px; }
+  .ratings-table th { font-size: 11px; padding: 8px 4px; overflow: hidden; white-space: nowrap; }
+  .ratings-table td { padding: 7px 4px; }
   /* Hide Sched Str column (col 5) — too wide for 412px */
   .ratings-table th:nth-child(5),
   .ratings-table td:nth-child(5) { display: none; }
-  /* Redistribute freed 15% across remaining 5 columns */
-  .ratings-table th:nth-child(1), .ratings-table td:nth-child(1) { width:  9%; }
-  .ratings-table th:nth-child(2), .ratings-table td:nth-child(2) { width: 50%; }
+  /* Redistribute freed 15% across remaining 5 columns; col1 wider so "Rank ↑" fits */
+  .ratings-table th:nth-child(1), .ratings-table td:nth-child(1) { width: 16%; }
+  .ratings-table th:nth-child(2), .ratings-table td:nth-child(2) { width: 43%; }
   .ratings-table th:nth-child(3), .ratings-table td:nth-child(3) { width: 11%; }
   .ratings-table th:nth-child(4), .ratings-table td:nth-child(4) { width: 16%; }
   .ratings-table th:nth-child(6), .ratings-table td:nth-child(6) { width: 14%; }
@@ -671,20 +671,31 @@ body {
   .team-stat-label { font-size: 9px; letter-spacing: 0.06em; }
   .team-stat-row { gap: 10px; }
 
-  /* Game log table — tighter columns + smaller font so opponent names fit */
+  /* Game log: two-row card layout per game; header row not meaningful, hide it */
+  .game-log-row.game-log-header { display: none; }
   .game-log-row {
-    grid-template-columns: 58px minmax(0, 1fr) 80px 52px 96px;
-    gap: 6px;
+    display: grid;
+    grid-template-areas:
+      "result   opponent opponent"
+      "date     record   rating";
+    grid-template-columns: auto 1fr auto;
+    gap: 3px 10px;
+    min-width: 0;
+    padding: 10px 12px;
     font-size: 14px;
-    min-width: 420px;
   }
+  .game-log-row > span:nth-child(1) { grid-area: date; align-self: center; }
   .game-log-row > span:nth-child(2) {
+    grid-area: opponent;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
     min-width: 0;
   }
-  .game-log-date { font-size: 13px; }
-  /* Hide (# rank) suffix in game log rating column — saves ~30px at 412px */
+  .game-log-row > span:nth-child(3) { grid-area: result; align-self: center; }
+  .game-log-row > span:nth-child(4) { grid-area: record; align-self: center; }
+  .game-log-row > span:nth-child(5) { grid-area: rating; align-self: center; }
+  .game-log-date { font-size: 12px; }
+  /* Hide (# rank) suffix in game log rating column — tight in two-row layout */
   .rank-suffix { display: none; }
 }
