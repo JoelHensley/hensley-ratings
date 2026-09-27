@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { ScheduleGame } from '../api/types'
@@ -257,6 +257,51 @@ export default function Schedule() {
   )
 }
 
+function PredictionBadge({ away, home }: { away: number; home: number }) {
+  const [visible, setVisible] = useState(false)
+  const awayWins = away > home
+
+  return (
+    <div
+      className="prediction-badge"
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+      onFocus={() => setVisible(true)}
+      onBlur={() => setVisible(false)}
+      tabIndex={0}
+      role="button"
+      aria-label={`Predicted score: ${away}–${home}`}
+    >
+      <div className="prediction-eyebrow">
+        Prediction
+        <span className="prediction-info" aria-hidden="true">i</span>
+      </div>
+      <div className="prediction-scores">
+        <span className={awayWins ? 'pred-winner' : 'pred-loser'}>{away}</span>
+        <span className="pred-sep">–</span>
+        <span className={!awayWins ? 'pred-winner' : 'pred-loser'}>{home}</span>
+      </div>
+      <div className={`prediction-tooltip${visible ? ' visible' : ''}`} role="tooltip">
+        <div className="pred-tip-title">How this prediction works</div>
+        <div className="pred-tip-body">
+          <div className="pred-tip-row">
+            <span className="pred-tip-bullet">◆</span>
+            <span>The Hensley Rating gap between teams sets the predicted margin.</span>
+          </div>
+          <div className="pred-tip-row">
+            <span className="pred-tip-bullet">◆</span>
+            <span>Scores are derived by blending each team's scoring average with their opponent's points-allowed average, then averaging two independent formulas.</span>
+          </div>
+          <div className="pred-tip-row">
+            <span className="pred-tip-bullet">◆</span>
+            <span>The home team receives a +1 rating advantage unless the game is at a neutral site.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TeamRef({ name, id, rank, year }: { name: string; id: number; rank: number | null; year: number }) {
   return (
     <Link to={`/teams/${id}?year=${year}&name=${slugify(name)}`} className="team-link">
@@ -302,9 +347,7 @@ function GameCard({ game, year, isGotw }: { game: ScheduleGame; year: number; is
                 {game.isNeutralSite ? 'Neutral' : 'vs'}
               </div>
               {game.predictedAwayScore !== null && game.predictedHomeScore !== null && (
-                <div className="game-prediction">
-                  Pred: {game.predictedAwayScore}–{game.predictedHomeScore}
-                </div>
+                <PredictionBadge away={game.predictedAwayScore} home={game.predictedHomeScore} />
               )}
             </>
           )}
