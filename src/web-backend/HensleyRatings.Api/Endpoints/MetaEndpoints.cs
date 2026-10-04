@@ -38,21 +38,12 @@ public static class MetaEndpoints
             }
             else
             {
-                weeks = new List<WeekSettings>();
-                for (int i = 0; i < allWeekSettings.Count; i++)
-                {
-                    var ws = allWeekSettings[i];
-                    var cutoff = DateTime.Parse(ws.CutoffDate);
-                    var prevCutoff = i > 0 ? DateTime.Parse(allWeekSettings[i - 1].CutoffDate) : DateTime.MinValue;
-                    bool hasGames = await db.Games.AnyAsync(g =>
-                        g.Year == year &&
-                        (g.HomeScore > 0 || g.AwayScore > 0) &&
-                        g.Date <= cutoff &&
-                        g.Date > prevCutoff);
-                    if (hasGames)
-                        weeks.Add(ws);
-                }
-                weeksWithRatings = weeks.Select(ws => ws.Week).ToHashSet();
+                weeksWithRatings = (await db.TeamResults
+                    .Where(tr => tr.Year == year)
+                    .Select(tr => tr.Week)
+                    .Distinct()
+                    .ToListAsync()).ToHashSet();
+                weeks = allWeekSettings.Where(ws => weeksWithRatings.Contains(ws.Week)).ToList();
             }
 
             var options = weeks.Select((ws, i) => new WeekOption(

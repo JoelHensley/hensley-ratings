@@ -27,20 +27,11 @@ namespace DataImport
         {
             try
             {
-                DateTime? gamesCutoff = null;
-                if (settings.ImportGames && !settings.WipeDbOnStart)
-                {
-                    gamesCutoff = FindMaxGameDate(settings.GamesFileName);
-                    if (gamesCutoff.HasValue)
-                        Console.Write("Removing games for year {0} up to {1:dd-MMM-yy}...", settings.Year, gamesCutoff.Value);
-                    else
-                        Console.Write("Removing previous data for year {0}...", settings.Year);
-                }
-                else
-                {
+                if (settings.WipeDbOnStart)
                     Console.Write("Removing previous data for year {0}...", settings.Year);
-                }
-                DeleteYearData(gamesCutoff);
+                else
+                    Console.Write("Removing games for year {0}...", settings.Year);
+                DeleteYearData();
                 Console.WriteLine("DONE");
 
                 if (settings.ImportWeekSettings)
@@ -108,18 +99,15 @@ namespace DataImport
             }
         }
 
-        private void DeleteYearData(DateTime? gamesCutoff = null)
+        private void DeleteYearData()
         {
-            var gamesQuery = entities.Games.Where(g => g.Year == settings.Year);
-            if (gamesCutoff.HasValue)
-                gamesQuery = gamesQuery.Where(g => g.Date <= gamesCutoff.Value);
-            entities.Games.RemoveRange(gamesQuery.ToList());
+            // Always delete all games for the year so raw-games.txt is the single source of truth.
+            // Results and WeekSettings (including ComputedGameCount) are preserved in incremental
+            // mode so RatingSystem can skip weeks whose game count hasn't changed.
+            entities.Games.RemoveRange(entities.Games.Where(g => g.Year == settings.Year).ToList());
 
             if (!settings.WipeDbOnStart)
             {
-                // Partial refresh: only clear games (up to cutoff) so they're re-imported.
-                // Results and WeekSettings (including ComputedGameCount) are preserved
-                // so RatingSystem can skip weeks whose game count hasn't changed.
                 foreach (var t in entities.Teams) t.Group = null;
                 foreach (var c in entities.Conferences) c.Group = null;
                 foreach (var d in entities.Divisions) d.Group = null;
@@ -340,11 +328,13 @@ namespace DataImport
                 bool isNeutralSite;
                 DateTime gameDate;
 
-                try { homeScore = Convert.ToInt32(homeScoreString); }
-                catch (FormatException) { Console.WriteLine($"\nInvalid score in line: {line}"); errors++; continue; }
+                if (string.IsNullOrEmpty(homeScoreString))
+                    homeScore = 0;
+                else { try { homeScore = Convert.ToInt32(homeScoreString); } catch (FormatException) { Console.WriteLine($"\nInvalid score in line: {line}"); errors++; continue; } }
 
-                try { awayScore = Convert.ToInt32(awayScoreString); }
-                catch (FormatException) { Console.WriteLine($"\nInvalid score in line: {line}"); errors++; continue; }
+                if (string.IsNullOrEmpty(awayScoreString))
+                    awayScore = 0;
+                else { try { awayScore = Convert.ToInt32(awayScoreString); } catch (FormatException) { Console.WriteLine($"\nInvalid score in line: {line}"); errors++; continue; } }
 
                 if (isNeutralSiteString.Equals("true")) isNeutralSite = true;
                 else if (isNeutralSiteString.Equals("false")) isNeutralSite = false;
@@ -368,20 +358,6 @@ namespace DataImport
 
             entities.SaveChanges();
             return errors;
-        }
-
-        private DateTime? FindMaxGameDate(string fileName)
-        {
-            if (!File.Exists(fileName)) return null;
-            DateTime? max = null;
-            foreach (var line in File.ReadAllLines(fileName))
-            {
-                var parts = line.Split(',');
-                if (parts.Length < 1) continue;
-                if (DateTime.TryParse(parts[0].Trim(), out var d) && (max == null || d > max))
-                    max = d;
-            }
-            return max;
         }
 
         private Team FindTeam(string name)
