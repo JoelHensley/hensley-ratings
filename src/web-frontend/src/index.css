@@ -682,6 +682,9 @@ body {
 .game-log-row:last-child { border-bottom: none; }
 .game-log-header { background: var(--surface); }
 .game-log-bye-row { background: var(--surface); }
+.rank-sub { font-size: 0.75em; font-weight: 400; color: var(--muted); margin-left: 3px; }
+.sos-rank { color: var(--muted); font-size: 0.85em; }
+.opp-rating { color: var(--muted); font-size: 14px; margin-left: 6px; font-variant-numeric: tabular-nums; }
 .game-log-date { color: var(--muted); font-size: 14px; }
 .game-log-result { font-weight: 700; font-size: 16px; }
 .game-log-result.w { color: var(--up); }
@@ -848,7 +851,22 @@ body {
   .game-log-row > span:nth-child(5) { grid-area: rating; align-self: center; }
   .game-log-row > span:nth-child(6) { grid-area: schstr; align-self: center; }
   .game-log-date { font-size: 12px; }
-  /* Hide (# rank) suffix and schedule delta in game log — tight in two-row layout */
-  .rank-suffix { display: none; }
+  /* Label the rating / sched strength values since the header row is hidden */
+  .game-log-row > span:nth-child(5)::before,
+  .game-log-row > span:nth-child(6)::before {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 4px;
+  }
+  .game-log-row > span:nth-child(5)::before { content: 'Rtg'; }
+  .game-log-row > span:nth-child(6)::before { content: 'SoS'; }
+  .game-log-row > span:nth-child(5),
+  .game-log-row > span:nth-child(6) { white-space: nowrap; font-size: 13px; }
+  .rank-suffix { font-size: 12px !important; margin-left: 2px !important; }
+  /* Schedule delta is too tight in the two-row layout */
   .sched-delta { display: none; }
+  .opp-rating { font-size: 12px; margin-left: 4px; }
 }

@@ -9,6 +9,9 @@ export interface RatedTeam {
   losses: number
   hensleyRating: number
   scheduleStrength: number
+  scheduleStrengthRankOverall: number
+  scheduleStrengthRankDivision: number
+  scheduleStrengthRankConference: number
   rankOverall: number
   rankDivision: number
   rankConference: number
@@ -48,6 +51,7 @@ export interface TeamGame {
   opponentId: number
   opponentName: string
   opponentRank: number | null
+  opponentRating: number | null
   teamScore: number | null
   opponentScore: number | null
   isWin: boolean | null

@@ -77,10 +77,11 @@ export default function Schedule() {
 
   const availableWeeks = weeksData?.weeks ?? []
 
-  // Default week: first week without ratings, or last week if all have ratings
+  // Default week: first unrated week after the latest rated week, or last week if none remain
   const defaultWeek = (() => {
     if (availableWeeks.length === 0) return 0
-    const nextUnrated = availableWeeks.find((w) => !w.hasRatings)
+    const lastRatedWeek = availableWeeks.filter((w) => w.hasRatings).at(-1)?.week ?? 0
+    const nextUnrated = availableWeeks.find((w) => !w.hasRatings && w.week > lastRatedWeek)
     return nextUnrated?.week ?? availableWeeks.at(-1)!.week
   })()
 

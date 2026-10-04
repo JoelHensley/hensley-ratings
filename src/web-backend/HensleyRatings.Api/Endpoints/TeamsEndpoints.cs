@@ -87,9 +87,11 @@ public static class TeamsEndpoints
                 .Where(tr => tr.Year == year && tr.Week == week && opponentIds.Contains(tr.TeamID))
                 .ToListAsync();
 
-            var oppRankByTeam = allOpponentResults
-                .ToDictionary(r => r.TeamID, r => overallRank.TryGetValue(r.TeamID, out var rank) ? rank : (int?)null);
             var ratingsByTeamId = allOpponentResults.ToDictionary(r => r.TeamID);
+
+            var oppRatingByWeek = allYearlyResults
+                .Where(tr => opponentIds.Contains(tr.TeamID))
+                .ToDictionary(tr => (tr.Week, tr.TeamID), tr => tr.HensleyRating);
 
             // Weekly snapshots of the team's own ratings for per-game tracking
             var teamWeeklyResults = await db.TeamResults
@@ -152,7 +154,14 @@ public static class TeamsEndpoints
                     }
                 }
 
-                oppRankByTeam.TryGetValue(opponentId, out var oppRank);
+                // Opponent rating/rank at the game's week; future (unrated) weeks use the latest week
+                var oppWeek = gameWeek != null && ratingRankByWeek.ContainsKey(gameWeek.Week) ? gameWeek.Week : week;
+                int? oppRank = null;
+                double? oppRatingAtWeek = null;
+                if (ratingRankByWeek.TryGetValue(oppWeek, out var oppRanks) && oppRanks.TryGetValue(opponentId, out var orank))
+                    oppRank = orank;
+                if (oppRatingByWeek.TryGetValue((oppWeek, opponentId), out var orating))
+                    oppRatingAtWeek = orating;
 
                 int? predTeamScore = null, predOppScore = null;
                 if (!isComplete && ratingsByTeamId.TryGetValue(opponentId, out var oppRating))
@@ -182,6 +191,7 @@ public static class TeamsEndpoints
                     opponentId,
                     opponentName ?? "Unknown",
                     oppRank,
+                    oppRatingAtWeek,
                     isComplete ? teamScore : null,
                     isComplete ? oppScore : null,
                     isWin,

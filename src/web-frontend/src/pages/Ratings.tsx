@@ -316,22 +316,24 @@ function RatingRow({ team, year, activeDivisionId, activeConferenceId }: { team:
     ? buildTeamPath(year, team.teamId, team.name, { id: team.divisionId, name: team.divisionName }, { id: team.conferenceId, name: team.conferenceName })
     : `/teams/${team.teamId}?year=${year}&name=${slugify(team.name)}`
 
+  const sosRank = activeConferenceId
+    ? team.scheduleStrengthRankConference
+    : activeDivisionId
+      ? team.scheduleStrengthRankDivision
+      : team.scheduleStrengthRankOverall
+
   return (
     <tr>
       <td>
         {activeConferenceId ? (
           <span className="rank-num">
             #{team.rankConference}
-            <span style={{ fontSize: '0.75em', fontWeight: 400, color: 'var(--muted)', marginLeft: 3 }}>
-              (#{team.rankDivision})
-            </span>
+            {team.rankDivision !== team.rankConference && <span className="rank-sub">(#{team.rankDivision})</span>}
           </span>
         ) : activeDivisionId ? (
           <span className="rank-num">
             #{team.rankDivision}
-            <span style={{ fontSize: '0.75em', fontWeight: 400, color: 'var(--muted)', marginLeft: 3 }}>
-              (#{team.rankOverall})
-            </span>
+            {team.rankOverall !== team.rankDivision && <span className="rank-sub">(#{team.rankOverall})</span>}
           </span>
         ) : (
           <span className="rank-num">#{team.rankOverall}</span>
@@ -351,7 +353,10 @@ function RatingRow({ team, year, activeDivisionId, activeConferenceId }: { team:
       <td>
         <span className="rating-val">{team.hensleyRating.toFixed(3)}</span>
       </td>
-      <td>{team.scheduleStrength.toFixed(3)}</td>
+      <td>
+        {team.scheduleStrength.toFixed(3)}
+        <span className="sos-rank"> (#{sosRank})</span>
+      </td>
       <td>
         <span className={`rank-change ${changeClass}`}>{changeLabel}</span>
       </td>

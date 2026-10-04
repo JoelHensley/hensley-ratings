@@ -98,6 +98,25 @@ public static class RatingsEndpoints
                     .Select((r, i) => (r.TeamID, Rank: i + 1))
                     .ToDictionary(x => x.TeamID, x => x.Rank));
 
+            // Schedule strength ranks, scoped the same way as rating ranks
+            Dictionary<int, int> RankBySos(IEnumerable<TeamResult> rs) =>
+                rs.OrderByDescending(r => r.ScheduleStrength)
+                  .Select((r, i) => (r.TeamID, Rank: i + 1))
+                  .ToDictionary(x => x.TeamID, x => x.Rank);
+
+            int DivisionOf(TeamResult r)
+            {
+                var aff = allAffsForYear.FirstOrDefault(ta => ta.TeamID == r.TeamID);
+                if (aff == null) return 0;
+                return confAffByConf.TryGetValue(aff.ConferenceID, out var ca) ? ca.DivisionID : 0;
+            }
+            int ConferenceOf(TeamResult r) =>
+                allAffsForYear.FirstOrDefault(ta => ta.TeamID == r.TeamID)?.ConferenceID ?? 0;
+
+            var sosOverall = RankBySos(allForRank);
+            var sosByDiv = allForRank.GroupBy(DivisionOf).ToDictionary(g => g.Key, g => RankBySos(g));
+            var sosByConf = allForRank.GroupBy(ConferenceOf).ToDictionary(g => g.Key, g => RankBySos(g));
+
             var response = results.Select(r =>
             {
                 var aff = allAffsForYear.FirstOrDefault(ta => ta.TeamID == r.TeamID);
@@ -115,6 +134,12 @@ public static class RatingsEndpoints
                 var confRank = 0;
                 confRanks?.TryGetValue(r.TeamID, out confRank);
 
+                sosOverall.TryGetValue(r.TeamID, out var sosOv);
+                var sosDiv = 0;
+                if (sosByDiv.TryGetValue(divId, out var sd)) sd.TryGetValue(r.TeamID, out sosDiv);
+                var sosConf = 0;
+                if (sosByConf.TryGetValue(aff?.ConferenceID ?? 0, out var sc)) sc.TryGetValue(r.TeamID, out sosConf);
+
                 int? change = null;
                 if (prevOverallRank != null && prevOverallRank.TryGetValue(r.TeamID, out var prevRank))
                     change = prevRank - overall; // positive = moved up
@@ -131,6 +156,9 @@ public static class RatingsEndpoints
                     r.Losses,
                     r.HensleyRating,
                     r.ScheduleStrength,
+                    sosOv,
+                    sosDiv == 0 ? sosOv : sosDiv,
+                    sosConf == 0 ? sosOv : sosConf,
                     overall,
                     divRank == 0 ? overall : divRank,
                     confRank == 0 ? overall : confRank,

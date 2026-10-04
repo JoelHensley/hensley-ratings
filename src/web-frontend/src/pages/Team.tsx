@@ -238,15 +238,18 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                   <span style={{ color: 'var(--muted)', marginRight: 4 }}>
                     {g.isNeutralSite ? 'vs' : g.isHome ? '' : '@'}
                   </span>
-                  {g.opponentRank && g.opponentRank <= 25 && (
-                    <span style={{ color: 'var(--accent)', marginRight: 2 }}>#{g.opponentRank}</span>
-                  )}
                   <Link
                     to={`/teams/${g.opponentId}?year=${year}&name=${slugify(g.opponentName)}`}
                     style={{ color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}
                   >
                     {g.opponentName}
                   </Link>
+                  {g.opponentRating != null && (
+                    <span className="opp-rating">
+                      {g.opponentRating.toFixed(3)}
+                      {g.opponentRank ? ` (#${g.opponentRank})` : ''}
+                    </span>
+                  )}
                 </span>
                 <span>
                   {isComplete ? (
