@@ -93,24 +93,18 @@ namespace DataConverter
                     continue;
                 }
 
-                bool hasScore = int.TryParse(awayScore, out _) && int.TryParse(homeScore, out _);
-                bool isUnscored = string.IsNullOrEmpty(awayScore) && string.IsNullOrEmpty(homeScore);
-
-                if (!hasScore && !isUnscored)
+                if (!int.TryParse(awayScore, out _) || !int.TryParse(homeScore, out _))
                 {
                     Console.WriteLine($"Error: malformed line: {line}");
                     errors++;
                     continue;
                 }
 
-                string csvAwayScore = hasScore ? awayScore : string.Empty;
-                string csvHomeScore = hasScore ? homeScore : string.Empty;
-                writer.WriteLine($"{date},{awayTeam},{csvAwayScore},{homeTeam},{csvHomeScore},{isNeutral}");
+                writer.WriteLine($"{date},{awayTeam},{awayScore},{homeTeam},{homeScore},{isNeutral}");
                 converted++;
             }
 
             Console.WriteLine($"Converted {converted} games ({skipped} skipped, {errors} error(s)) → {settings.OutputFileName}");
-            // Note: unscored future games are included in `converted` count with empty score fields.
             if (errors > 0)
             {
                 Console.WriteLine($"Aborting: {errors} line(s) failed to parse.");

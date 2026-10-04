@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -30,7 +31,7 @@ namespace DataImport
                 if (settings.WipeDbOnStart)
                     Console.Write("Removing previous data for year {0}...", settings.Year);
                 else
-                    Console.Write("Removing games for year {0}...", settings.Year);
+                    Console.Write("Preparing incremental update for year {0}...", settings.Year);
                 DeleteYearData();
                 Console.WriteLine("DONE");
 
@@ -101,19 +102,18 @@ namespace DataImport
 
         private void DeleteYearData()
         {
-            // Always delete all games for the year so raw-games.txt is the single source of truth.
-            // Results and WeekSettings (including ComputedGameCount) are preserved in incremental
-            // mode so RatingSystem can skip weeks whose game count hasn't changed.
-            entities.Games.RemoveRange(entities.Games.Where(g => g.Year == settings.Year).ToList());
-
             if (!settings.WipeDbOnStart)
             {
+                // Incremental: keep all games (including unscored future games), results and
+                // WeekSettings. Games are upserted in ImportGames.
                 foreach (var t in entities.Teams) t.Group = null;
                 foreach (var c in entities.Conferences) c.Group = null;
                 foreach (var d in entities.Divisions) d.Group = null;
                 entities.SaveChanges();
                 return;
             }
+
+            entities.Games.RemoveRange(entities.Games.Where(g => g.Year == settings.Year).ToList());
 
             var weekSettings = entities.WeekSettings.Where(ws => ws.Year == settings.Year).ToList();
             entities.WeekSettings.RemoveRange(weekSettings);
@@ -288,7 +288,11 @@ namespace DataImport
         {
             StreamReader reader = new StreamReader(settings.GamesFileName);
             string[] row;
-            int errors = 0;
+            int errors = 0, added = 0, updated = 0;
+            var changedDates = new HashSet<DateTime>();
+            var existingGames = settings.WipeDbOnStart
+                ? new List<Game>()
+                : entities.Games.Where(g => g.Year == settings.Year).ToList();
 
             while (reader.EndOfStream == false)
             {
@@ -328,13 +332,11 @@ namespace DataImport
                 bool isNeutralSite;
                 DateTime gameDate;
 
-                if (string.IsNullOrEmpty(homeScoreString))
-                    homeScore = 0;
-                else { try { homeScore = Convert.ToInt32(homeScoreString); } catch (FormatException) { Console.WriteLine($"\nInvalid score in line: {line}"); errors++; continue; } }
+                try { homeScore = Convert.ToInt32(homeScoreString); }
+                catch (FormatException) { Console.WriteLine($"\nInvalid score in line: {line}"); errors++; continue; }
 
-                if (string.IsNullOrEmpty(awayScoreString))
-                    awayScore = 0;
-                else { try { awayScore = Convert.ToInt32(awayScoreString); } catch (FormatException) { Console.WriteLine($"\nInvalid score in line: {line}"); errors++; continue; } }
+                try { awayScore = Convert.ToInt32(awayScoreString); }
+                catch (FormatException) { Console.WriteLine($"\nInvalid score in line: {line}"); errors++; continue; }
 
                 if (isNeutralSiteString.Equals("true")) isNeutralSite = true;
                 else if (isNeutralSiteString.Equals("false")) isNeutralSite = false;
@@ -342,6 +344,40 @@ namespace DataImport
 
                 try { gameDate = Convert.ToDateTime(gameDateString); }
                 catch (Exception) { Console.WriteLine($"\nInvalid date in line: {line}"); errors++; continue; }
+
+                bool hasScore = homeScore > 0 || awayScore > 0;
+
+                if (!settings.WipeDbOnStart)
+                {
+                    // Prefer the exact scheduled game; otherwise any unscored game between the
+                    // same teams (covers rescheduled dates / swapped home-away).
+                    var existing = existingGames.FirstOrDefault(g => g.HomeTeamID == homeTeam.ID
+                                       && g.AwayTeamID == awayTeam.ID && g.Date.Date == gameDate.Date)
+                        ?? existingGames.FirstOrDefault(g => !(g.HomeScore > 0 || g.AwayScore > 0)
+                                       && ((g.HomeTeamID == homeTeam.ID && g.AwayTeamID == awayTeam.ID)
+                                        || (g.HomeTeamID == awayTeam.ID && g.AwayTeamID == homeTeam.ID)));
+
+                    if (existing != null)
+                    {
+                        if (!hasScore) continue; // never overwrite with an unscored row
+
+                        bool unchanged = existing.HomeTeamID == homeTeam.ID && existing.AwayTeamID == awayTeam.ID
+                            && existing.HomeScore == homeScore && existing.AwayScore == awayScore
+                            && existing.IsNeutralSite == isNeutralSite && existing.Date.Date == gameDate.Date;
+                        if (unchanged) continue;
+
+                        changedDates.Add(gameDate.Date);
+                        if (existing.HomeScore > 0 || existing.AwayScore > 0) changedDates.Add(existing.Date.Date);
+                        existing.HomeTeam = homeTeam;
+                        existing.AwayTeam = awayTeam;
+                        existing.HomeScore = homeScore;
+                        existing.AwayScore = awayScore;
+                        existing.IsNeutralSite = isNeutralSite;
+                        existing.Date = gameDate;
+                        updated++;
+                        continue;
+                    }
+                }
 
                 var game = new Game
                 {
@@ -354,10 +390,35 @@ namespace DataImport
                     Year = settings.Year
                 };
                 entities.Games.Add(game);
+                existingGames.Add(game);
+                if (hasScore) changedDates.Add(gameDate.Date);
+                added++;
             }
 
             entities.SaveChanges();
+            if (!settings.WipeDbOnStart)
+            {
+                Console.Write($"({added} added, {updated} updated) ");
+                InvalidateChangedWeeks(changedDates);
+            }
             return errors;
+        }
+
+        // Clear ComputedGameCount for the first week containing a changed game and every later
+        // week so RatingSystem recomputes them; earlier weeks are left untouched.
+        private void InvalidateChangedWeeks(HashSet<DateTime> changedDates)
+        {
+            if (changedDates.Count == 0) return;
+            var earliest = changedDates.Min();
+            var weeks = entities.WeekSettings.Where(ws => ws.Year == settings.Year).AsEnumerable()
+                .OrderBy(ws => ws.Week).ToList();
+            bool invalidate = false;
+            foreach (var ws in weeks)
+            {
+                if (!invalidate && earliest <= DateTime.Parse(ws.CutoffDate).Date) invalidate = true;
+                if (invalidate) ws.ComputedGameCount = null;
+            }
+            entities.SaveChanges();
         }
 
         private Team FindTeam(string name)
