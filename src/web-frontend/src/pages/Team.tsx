@@ -191,7 +191,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                   </span>
                   <span />
                   <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
-                    {b.wins}–{b.losses}
+                    {b.rating != null ? `${b.wins}–${b.losses}` : ''}
                   </span>
                   <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                     {b.rating != null ? (
@@ -272,7 +272,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                   )}
                 </span>
                 <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
-                  {g.runningWins}–{g.runningLosses}
+                  {isComplete ? `${g.runningWins}–${g.runningLosses}` : ''}
                 </span>
                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                   {g.teamRating !== null ? (
