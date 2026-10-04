@@ -871,8 +871,8 @@ body {
   /* Schedule delta is too tight in the two-row layout */
   .sched-delta { display: none; }
   /* Opponent cell: name + record, with rating/rank as a compact pill on the same line */
-  .opp-cell { flex-direction: row; align-items: center; gap: 8px; }
-  .opp-name-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .opp-cell { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 2px 8px; white-space: normal; }
+  .opp-name-line { white-space: nowrap; }
   .opp-record { font-size: 13px; margin-left: 4px; }
   .opp-rating {
     flex-shrink: 0;
