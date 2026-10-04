@@ -193,7 +193,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                   <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
                     {b.rating != null ? `${b.wins}–${b.losses}` : ''}
                   </span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  <span className={b.rating == null ? 'game-log-empty' : undefined} style={{ fontVariantNumeric: 'tabular-nums' }}>
                     {b.rating != null ? (
                       <>
                         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500 }}>{b.rating.toFixed(3)}</span>
@@ -206,9 +206,9 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                           </span>
                         )}
                       </>
-                    ) : '—'}
+                    ) : null}
                   </span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  <span className={b.rating == null ? 'game-log-empty' : undefined} style={{ fontVariantNumeric: 'tabular-nums' }}>
                     {b.scheduleStrength != null ? (
                       <>
                         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500 }}>{b.scheduleStrength.toFixed(3)}</span>
@@ -221,7 +221,7 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                           </span>
                         )}
                       </>
-                    ) : '—'}
+                    ) : null}
                   </span>
                 </div>
               )
@@ -274,8 +274,8 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                 <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
                   {isComplete ? `${g.runningWins}–${g.runningLosses}` : ''}
                 </span>
-                <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {g.teamRating !== null ? (
+                <span className={isComplete ? undefined : 'game-log-empty'} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {!isComplete ? null : g.teamRating !== null ? (
                     <>
                       <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500 }}>
                         {g.teamRating.toFixed(3)}
@@ -300,8 +300,8 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
                     </>
                   ) : '—'}
                 </span>
-                <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {g.scheduleStrength != null ? (
+                <span className={isComplete ? undefined : 'game-log-empty'} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {!isComplete ? null : g.scheduleStrength != null ? (
                     <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500 }}>
                       {g.scheduleStrength.toFixed(3)}
                       {g.scheduleStrengthRank && (

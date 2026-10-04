@@ -867,6 +867,7 @@ body {
   .game-log-row > span:nth-child(6)::before { content: 'SoS'; }
   .game-log-row > span:nth-child(5),
   .game-log-row > span:nth-child(6) { white-space: nowrap; font-size: 13px; }
+  .game-log-row > span.game-log-empty::before { content: none; }
   .rank-suffix { font-size: 12px !important; margin-left: 2px !important; }
   /* Schedule delta is too tight in the two-row layout */
   .sched-delta { display: none; }
