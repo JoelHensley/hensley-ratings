@@ -89,10 +89,6 @@ public static class TeamsEndpoints
 
             var ratingsByTeamId = allOpponentResults.ToDictionary(r => r.TeamID);
 
-            var oppRatingByWeek = allYearlyResults
-                .Where(tr => opponentIds.Contains(tr.TeamID))
-                .ToDictionary(tr => (tr.Week, tr.TeamID), tr => tr.HensleyRating);
-
             // Weekly snapshots of the team's own ratings for per-game tracking
             var teamWeeklyResults = await db.TeamResults
                 .Where(tr => tr.TeamID == id && tr.Year == year)
@@ -154,14 +150,18 @@ public static class TeamsEndpoints
                     }
                 }
 
-                // Opponent rating/rank at the game's week; future (unrated) weeks use the latest week
-                var oppWeek = gameWeek != null && ratingRankByWeek.ContainsKey(gameWeek.Week) ? gameWeek.Week : week;
+                // Opponent rating, rank and record always use the latest rated week
                 int? oppRank = null;
                 double? oppRatingAtWeek = null;
-                if (ratingRankByWeek.TryGetValue(oppWeek, out var oppRanks) && oppRanks.TryGetValue(opponentId, out var orank))
+                int? oppWins = null, oppLosses = null;
+                if (ratingRankByWeek.TryGetValue(week, out var oppRanks) && oppRanks.TryGetValue(opponentId, out var orank))
                     oppRank = orank;
-                if (oppRatingByWeek.TryGetValue((oppWeek, opponentId), out var orating))
-                    oppRatingAtWeek = orating;
+                if (ratingsByTeamId.TryGetValue(opponentId, out var oppLatest))
+                {
+                    oppRatingAtWeek = oppLatest.HensleyRating;
+                    oppWins = oppLatest.Wins;
+                    oppLosses = oppLatest.Losses;
+                }
 
                 int? predTeamScore = null, predOppScore = null;
                 if (!isComplete && ratingsByTeamId.TryGetValue(opponentId, out var oppRating))
@@ -192,6 +192,8 @@ public static class TeamsEndpoints
                     opponentName ?? "Unknown",
                     oppRank,
                     oppRatingAtWeek,
+                    oppWins,
+                    oppLosses,
                     isComplete ? teamScore : null,
                     isComplete ? oppScore : null,
                     isWin,

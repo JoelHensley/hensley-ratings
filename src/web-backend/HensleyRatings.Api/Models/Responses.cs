@@ -54,6 +54,8 @@ public record TeamGameResponse(
     string OpponentName,
     int? OpponentRank,
     double? OpponentRating,
+    int? OpponentWins,
+    int? OpponentLosses,
     int? TeamScore,
     int? OpponentScore,
     bool? IsWin,

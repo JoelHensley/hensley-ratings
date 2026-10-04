@@ -684,7 +684,9 @@ body {
 .game-log-bye-row { background: var(--surface); }
 .rank-sub { font-size: 0.75em; font-weight: 400; color: var(--muted); margin-left: 3px; }
 .sos-rank { color: var(--muted); font-size: 0.85em; }
-.opp-rating { color: var(--muted); font-size: 14px; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.opp-cell { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.opp-record { color: var(--muted); font-size: 14px; margin-left: 6px; }
+.opp-rating { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 .game-log-date { color: var(--muted); font-size: 14px; }
 .game-log-result { font-weight: 700; font-size: 16px; }
 .game-log-result.w { color: var(--up); }
@@ -868,5 +870,18 @@ body {
   .rank-suffix { font-size: 12px !important; margin-left: 2px !important; }
   /* Schedule delta is too tight in the two-row layout */
   .sched-delta { display: none; }
-  .opp-rating { font-size: 12px; margin-left: 4px; }
+  /* Opponent cell: name + record, with rating/rank as a compact pill on the same line */
+  .opp-cell { flex-direction: row; align-items: center; gap: 8px; }
+  .opp-name-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .opp-record { font-size: 13px; margin-left: 4px; }
+  .opp-rating {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    white-space: nowrap;
+  }
+  .opp-rating-label { display: none; }
 }

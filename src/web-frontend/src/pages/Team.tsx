@@ -234,18 +234,24 @@ export default function Team({ teamId: propTeamId, year: propYear }: TeamProps =
             return (
               <div key={g.gameId} className="game-log-row">
                 <span className="game-log-date">{formatDate(g.date)}</span>
-                <span>
-                  <span style={{ color: 'var(--muted)', marginRight: 4 }}>
-                    {g.isNeutralSite ? 'vs' : g.isHome ? '' : '@'}
+                <span className="opp-cell">
+                  <span className="opp-name-line">
+                    <span style={{ color: 'var(--muted)', marginRight: 4 }}>
+                      {g.isNeutralSite ? 'vs' : g.isHome ? '' : '@'}
+                    </span>
+                    <Link
+                      to={`/teams/${g.opponentId}?year=${year}&name=${slugify(g.opponentName)}`}
+                      style={{ color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}
+                    >
+                      {g.opponentName}
+                    </Link>
+                    {g.opponentWins != null && (
+                      <span className="opp-record">({g.opponentWins}-{g.opponentLosses})</span>
+                    )}
                   </span>
-                  <Link
-                    to={`/teams/${g.opponentId}?year=${year}&name=${slugify(g.opponentName)}`}
-                    style={{ color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}
-                  >
-                    {g.opponentName}
-                  </Link>
                   {g.opponentRating != null && (
                     <span className="opp-rating">
+                      <span className="opp-rating-label">Rating: </span>
                       {g.opponentRating.toFixed(3)}
                       {g.opponentRank ? ` (#${g.opponentRank})` : ''}
                     </span>

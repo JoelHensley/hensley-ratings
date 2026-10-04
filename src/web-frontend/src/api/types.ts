@@ -52,6 +52,8 @@ export interface TeamGame {
   opponentName: string
   opponentRank: number | null
   opponentRating: number | null
+  opponentWins: number | null
+  opponentLosses: number | null
   teamScore: number | null
   opponentScore: number | null
   isWin: boolean | null
